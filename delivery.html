@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Gomandi Delivery Partner</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Mappls Web Maps JS — live road map + Indian street/POI data.
+         IMPORTANT: add the STATIC MAPPLS WEB KEY from Mappls Console below.
+         For Netlify HTML, the Mappls key must be enabled for Web/Cloud and
+         the Netlify origin(s) must be allowed in the Mappls Console. -->
+    <script>window.GOMANDI_MAPPLS_STATIC_KEY = 'wkrtnhwlydxcmyiufbpsozarevfuoagorbld';</script>
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#f4f5f7;color:#1c1f24;height:100%;}
+.test-badge{position:fixed;top:0;left:0;right:0;background:#fff3cd;color:#7a5b00;font-size:11px;font-weight:800;text-align:center;padding:5px;z-index:9999;border-bottom:1px solid #ffe69c;}
+.app{padding-top:26px;padding-bottom:78px;min-height:100vh;}
+.topbar{background:#16a34a;color:#fff;padding:14px 16px 16px;display:flex;align-items:center;justify-content:space-between;}
+.topbar h1{font-size:17px;margin:0;font-weight:800;}
+.topbar .who{font-size:12px;opacity:.9;margin-top:2px;}
+.view{display:none;padding:14px;}
+.view.active{display:block;}
+
+.card{background:#fff;border-radius:14px;padding:14px 15px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,.06);border:1px solid #eceef1;}
+.section-title{font-size:15px;font-weight:800;margin:4px 0 10px;color:#20242a;}
+.empty-note{text-align:center;color:#8a919c;font-size:13.5px;padding:30px 10px;}
+
+/* order card (Home - available to join) */
+.order-card{display:flex;flex-direction:column;gap:8px;}
+.order-top{display:flex;justify-content:space-between;align-items:flex-start;}
+.order-id{font-weight:800;font-size:14.5px;}
+.order-sub{font-size:12px;color:#6c717c;margin-top:2px;}
+.order-addr{font-size:13px;color:#454a52;background:#f6f7fb;border-radius:9px;padding:8px 10px;}
+.order-actions{display:flex;gap:8px;margin-top:4px;}
+.btn{border:0;border-radius:10px;font-weight:800;font-size:13.5px;padding:10px 14px;flex:1;text-align:center;}
+.btn-outline{background:#fff;border:1.4px solid #16a34a;color:#16a34a;}
+.btn-solid{background:#16a34a;color:#fff;}
+.btn-danger{background:#fff;border:1.4px solid #d63b3b;color:#d63b3b;}
+.btn:disabled{opacity:.5;}
+
+/* Active delivery card */
+.active-actions{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(145px,.85fr);gap:8px;margin-top:10px}.active-actions .btn{width:100%;margin:0}.active-actions .deliver-select{width:100%;margin:0;min-width:0;}
+.active-card{border:2px solid #16a34a;}
+.active-badge{display:inline-block;background:#eafaf1;color:#16a34a;font-size:11px;font-weight:800;border-radius:20px;padding:3px 10px;margin-bottom:8px;}
+#deliveryMapEl{width:100%;height:220px;border-radius:12px;overflow:hidden;background:#e8edf0;border:1px solid #e0e4e7;margin:10px 0;}
+.deliver-select{width:100%;padding:11px;border-radius:10px;border:1px solid #d9dce2;font-size:14px;margin-top:8px;background:#fff;}
+
+/* history card */
+.hist-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f0f1f3;}
+.hist-row:last-child{border-bottom:0;}
+.hist-left b{font-size:14px;}
+.hist-left div{font-size:12px;color:#777;margin-top:2px;}
+.hist-amt{font-weight:800;color:#16a34a;font-size:14.5px;}
+
+/* profile */
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:#eafaf1;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 10px;}
+.profile-name{text-align:center;font-size:17px;font-weight:800;}
+.profile-name i{font-size:12px;color:#999;margin-left:6px;}
+.stat-row{display:flex;gap:10px;margin:14px 0;}
+.stat-box{flex:1;background:#f6f7fb;border-radius:12px;padding:12px;text-align:center;}
+.stat-box b{font-size:19px;display:block;}
+.stat-box span{font-size:11.5px;color:#777;}
+.field{margin-bottom:10px;}
+.field label{font-size:12.5px;color:#666;font-weight:700;display:block;margin-bottom:4px;}
+.field input{width:100%;padding:11px;border-radius:9px;border:1px solid #d9dce2;font-size:14px;}
+.payout-note{font-size:12px;color:#1a7d34;background:#eafaf1;border-radius:9px;padding:8px 10px;margin-top:10px;}
+
+/* order detail modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;z-index:5000;}
+.modal.active{display:flex;}
+.sheet{background:#fff;width:100%;max-height:85vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:18px;}
+.sheet h2{font-size:17px;margin:0 0 12px;}
+.item-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #f2f3f5;}
+.item-row img{width:48px;height:48px;border-radius:8px;object-fit:cover;background:#f1f2f4;}
+.item-row .nm{font-size:13.5px;font-weight:700;}
+.close-x{position:absolute;top:14px;right:16px;font-size:20px;color:#888;}
+.sheet{position:relative;}
+.detail-line{font-size:13.5px;color:#40454d;margin-bottom:6px;display:flex;gap:8px;align-items:flex-start;}
+.detail-line i{width:16px;color:#16a34a;margin-top:2px;}
+
+/* bottom nav */
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid #eee;display:flex;height:64px;z-index:3000;}
+.bottom-nav .nav-item{min-width:0;}
+.bottom-nav .nav-item{white-space:nowrap;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#888;font-size:10.5px;font-weight:700;}
+.nav-item i{font-size:18px;}
+.nav-item.active{color:#16a34a;}
+
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#20242a;color:#fff;padding:10px 18px;border-radius:24px;font-size:13.5px;z-index:9000;opacity:0;transition:opacity .25s;pointer-events:none;}
+.toast.show{opacity:1;}
+
+/* LIVE DELIVERY MAP — full-screen, based on the proven GPS test map */
+#deliveryMapOverlay{position:fixed;inset:0;background:#f4f5f7;z-index:12000;display:none;overflow:hidden;}
+#deliveryMapOverlay.active{display:block;}
+#deliveryMapFullscreen{position:absolute;inset:0;background:#e8edf0;}
+#deliveryMapFullscreen{width:100%;height:100%;}.mappls-map{width:100%;height:100%;}
+.delivery-map-top{position:absolute;top:calc(10px + env(safe-area-inset-top,0px));left:12px;right:12px;z-index:12010;display:flex;align-items:center;gap:8px;pointer-events:none;}
+.delivery-map-back,.delivery-map-status{pointer-events:auto;background:#fff;border:0;border-radius:24px;box-shadow:0 3px 14px rgba(0,0,0,.18);font-weight:800;}
+.delivery-map-back{width:44px;height:44px;font-size:19px;}
+.delivery-map-status{padding:11px 14px;font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.delivery-map-bottom{position:absolute;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:12010;background:#fff;border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:14px;}
+.delivery-map-bottom b{font-size:15px;}
+.delivery-map-bottom .muted{font-size:12px;color:#6d737c;margin-top:3px;}
+.delivery-map-bottom .map-actions{display:flex;gap:8px;margin-top:10px;}
+.delivery-map-bottom button{flex:1;border:0;border-radius:11px;padding:11px;background:#16a34a;color:#fff;font-weight:800;}
+.delivery-map-bottom button.secondary{background:#f1f3f5;color:#30343a;}
+.map-rider-pin{width:38px;height:38px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.32);}
+.map-destination-pin{width:34px;height:34px;border-radius:50% 50% 50% 0;background:#e53935;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.32);}
+.map-destination-pin i{transform:rotate(45deg);}
+.mappls-rider-pin{width:42px;height:42px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:19px;border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.35);}
+.mappls-destination-pin{width:36px;height:36px;border-radius:50% 50% 50% 0;background:#e53935;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,.35);}
+.mappls-destination-pin i{transform:rotate(45deg);}
+
+
+/* Join -> Show location sheet */
+#joinLocationModal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:11000;display:none;align-items:flex-end;}
+#joinLocationModal.active{display:flex;}
+.join-location-sheet{width:100%;background:#fff;border-radius:20px 20px 0 0;padding:22px 18px calc(18px + env(safe-area-inset-bottom,0px));}
+.join-location-sheet .pin{width:52px;height:52px;border-radius:50%;background:#eafaf1;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 12px;}
+.join-location-sheet h3{text-align:center;margin:0;font-size:20px;}
+.join-location-sheet p{text-align:center;color:#707681;font-size:14px;margin:7px 0 16px;line-height:1.45;}
+.join-location-sheet button{width:100%;border:0;border-radius:12px;padding:13px;background:#16a34a;color:#fff;font-size:15px;font-weight:800;}
+.join-location-sheet .cancel{background:#f2f3f5;color:#333;margin-top:8px;}
+
+/* ===== Gomandi rider: premium profile pages (additive) ===== */
+.gm-menu{padding:6px 6px}
+.gm-menu-row{display:flex;align-items:center;gap:13px;padding:13px 10px;border-radius:12px;transition:background .18s ease}
+.gm-menu-row+.gm-menu-row{border-top:1px solid #f0f1f3;border-top-left-radius:0;border-top-right-radius:0}
+.gm-menu-row:active{background:#f4f8f5}
+.gm-ic{width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
+.gm-tx{flex:1;min-width:0}
+.gm-tx b{display:block;font-size:15px;color:#1c1f24}
+.gm-tx span{display:block;font-size:12.5px;color:#7b828d;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gm-chev{color:#b4bac3;font-size:13px}
+
+.gm-page{position:fixed;inset:0;z-index:6000;background:#f4f5f7;display:none;flex-direction:column;opacity:0;transform:translateX(34px);transition:opacity .3s ease,transform .3s cubic-bezier(.22,.8,.3,1)}
+.gm-page.show{opacity:1;transform:none}
+.gm-page-head{padding:calc(34px + env(safe-area-inset-top,0px)) 14px 12px;background:#fff;border-bottom:1px solid #eceef1;display:flex;align-items:center;gap:12px;flex:0 0 auto}
+.gm-page-head h2{margin:0;font-size:18px;font-weight:800;color:#1c1f24}
+.gm-back{width:40px;height:40px;border-radius:50%;border:1px solid #e2e5e8;background:#fff;color:#1c1f24;font-size:16px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.gm-back:active{background:#f1f3f5}
+.gm-page-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px calc(30px + env(safe-area-inset-bottom,0px))}
+
+.gm-card{background:#fff;border:1px solid #eceef1;border-radius:16px;padding:14px 15px;margin-bottom:12px;box-shadow:0 2px 10px rgba(20,30,20,.05);animation:gmRise .35s ease both}
+@keyframes gmRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.gm-sum{background:linear-gradient(135deg,#16a34a,#0f8a3c);color:#fff;border:0}
+.gm-sum .big{font-size:34px;font-weight:900;letter-spacing:-.5px}
+.gm-sum .sub{font-size:13px;opacity:.9;margin-top:2px}
+.gm-sum .sub2{font-size:12px;opacity:.85;margin-top:8px;background:rgba(255,255,255,.16);border-radius:10px;padding:7px 10px;display:inline-block}
+.gm-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.gm-top b{font-size:15px}
+.gm-top .ph{font-size:12.5px;color:#6c717c;margin-top:2px}
+.gm-amt{font-size:18px;font-weight:900;color:#16a34a;white-space:nowrap}
+.gm-line{display:flex;gap:9px;align-items:flex-start;font-size:13px;color:#454a52;margin-top:9px;line-height:1.4}
+.gm-line i{color:#16a34a;width:15px;margin-top:2px;flex:0 0 auto}
+.gm-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:11px;padding-top:10px;border-top:1px dashed #e6e8eb;font-size:12px;color:#7b828d}
+.gm-chip{font-size:11px;font-weight:800;border-radius:20px;padding:4px 10px;white-space:nowrap}
+.gm-chip.ok{background:#eafaf1;color:#16a34a}
+.gm-chip.wait{background:#fff4e0;color:#b26a00}
+.gm-btnrow{display:flex;gap:9px;margin-top:12px}
+.gm-btnrow button{flex:1;border-radius:11px;padding:11px 8px;font-weight:800;font-size:13.5px;border:1.4px solid #16a34a;background:#16a34a;color:#fff}
+.gm-btnrow button.o{background:#fff;color:#16a34a}
+.gm-empty{text-align:center;color:#8a919c;font-size:13.5px;padding:46px 14px;line-height:1.55}
+.gm-empty i{display:block;font-size:30px;color:#c5cad1;margin-bottom:10px}
+.gm-stars{color:#f5b301;letter-spacing:2px;font-size:15px}
+.gm-stars .off{color:#d6d9dd}
+.gm-ins-box{background:#fff8e6;border:1px solid #ffe3a3;border-radius:12px;padding:11px 12px;margin-bottom:10px;font-size:13.5px;color:#5a4300;white-space:pre-wrap;word-break:break-word}
+.gm-ins-box b{display:block;font-size:12px;margin-bottom:4px;color:#8a6100}
+.gm-sec{font-size:12.5px;font-weight:800;color:#6c717c;text-transform:uppercase;letter-spacing:.4px;margin:4px 2px 8px}
+.gm-item{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid #f2f3f5;font-size:13.5px}
+.gm-item:last-child{border-bottom:0}
+.gm-item img{width:44px;height:44px;border-radius:9px;object-fit:cover;background:#f1f2f4}
+.gm-item .q{margin-left:auto;color:#7b828d;font-size:12.5px}
+.gm-kv{display:flex;justify-content:space-between;gap:12px;font-size:13.5px;padding:6px 0}
+.gm-kv span{color:#6c717c}
+.gm-kv b{text-align:right;word-break:break-word}
+
+#gmPop{position:fixed;inset:0;z-index:7000;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(12,20,12,0);transition:background .25s ease}
+#gmPop.show{background:rgba(12,20,12,.5)}
+#gmPop .gm-pop-card{width:100%;max-width:420px;background:#fff;border-radius:22px;padding:20px 18px 16px;opacity:0;transform:translateY(18px) scale(.96);transition:opacity .26s ease,transform .3s cubic-bezier(.22,.8,.3,1);box-shadow:0 18px 50px rgba(0,0,0,.25)}
+#gmPop.show .gm-pop-card{opacity:1;transform:none}
+.gm-pop-ic{width:46px;height:46px;border-radius:50%;background:#fff4e0;color:#e58a00;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:10px}
+.gm-pop-card h3{margin:0 0 2px;font-size:17px}
+.gm-pop-card .by{font-size:12.5px;color:#7b828d;margin-bottom:12px}
+.gm-pop-text{background:#f7f8fa;border-radius:13px;padding:13px;font-size:15px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:45vh;overflow:auto}
+.gm-pop-card button{width:100%;margin-top:14px;border:0;border-radius:12px;padding:13px;background:#16a34a;color:#fff;font-weight:800;font-size:14.5px}
+</style>
+</head>
+<body>
+<style id="gm-cover-style">#gmSplash{display:none;position:fixed;inset:0;z-index:100100;background:#fff;align-items:center;justify-content:center;flex-direction:column}html.gm-cover #gmSplash{display:flex}</style>
+<script>try{var __u=localStorage.getItem('gmAuthUid'),__c=JSON.parse(localStorage.getItem('gmPC')||'null');if(!(__u&&__c&&__c.uid===__u&&__c.ok))document.documentElement.classList.add('gm-cover')}catch(e){document.documentElement.classList.add('gm-cover')}</script>
+<div id="gmSplash"><i class="fa-solid fa-motorcycle" style="font-size:46px;color:#16a34a"></i><div style="margin-top:14px;font:800 16px system-ui;color:#14532d">GoMandi Delivery</div><div style="margin-top:6px;font:500 12px system-ui;color:#94a3b8">Loading…</div></div>
+
+
+<div class="test-badge">⚠ TEST MODE — Login/KYC not added yet. Firebase data is real.</div>
+
+<div class="app">
+
+  <div class="topbar">
+    <div>
+      <h1>Gomandi Delivery</h1>
+      <div class="who" id="topbarWho">Loading…</div>
+    </div>
+    <i class="fa-solid fa-location-crosshairs" id="gpsIndicator" style="font-size:18px;opacity:.6" title="GPS bridge status"></i>
+  </div>
+
+  <!-- HOME -->
+  <section id="homeView" class="view active">
+    <div id="homeContent"><div class="empty-note">Loading orders…</div></div>
+  </section>
+
+  <!-- ORDER LOCATION — persistent joined deliveries -->
+  <section id="orderLocationView" class="view">
+    <div class="section-title">Order Location</div>
+    <div id="orderLocationContent"><div class="empty-note">Loading joined orders…</div></div>
+  </section>
+
+  <!-- ORDERS / HISTORY -->
+  <section id="ordersView" class="view">
+    <div class="section-title">Delivery History</div>
+    <div class="card" id="historyCard"><div class="empty-note">No deliveries yet.</div></div>
+  </section>
+
+  <!-- PROFILE -->
+  <section id="profileView" class="view">
+    <div class="card">
+      <div class="profile-avatar" id="profileAvatarLetter">D</div>
+      <div class="profile-name"><span id="profileNameText">Delivery Partner</span> <i class="fa-solid fa-pen" onclick="editMyName()"></i></div>
+      <div class="stat-row">
+        <div class="stat-box"><b id="statDelivered">0</b><span>Orders Delivered</span></div>
+        <div class="stat-box"><b id="statEarnings">₹0</b><span>Total Earnings</span></div>
+      </div>
+      <div class="field"><label>Phone Number</label><input id="profilePhone" placeholder="Aapka mobile number" inputmode="tel" onchange="setMyPhone(this.value)"></div>
+      <div class="payout-note"><i class="fa-solid fa-circle-info"></i>&nbsp; Payout schedule: every Wednesday (admin-controlled).</div>
+    </div>
+    <div class="card gm-menu">
+      <div class="gm-menu-row" onclick="gmOpenPage('gmPageTips')"><div class="gm-ic" style="background:#fff4e0;color:#e58a00"><i class="fa-solid fa-hand-holding-dollar"></i></div><div class="gm-tx"><b>Tips</b><span id="gmTipsSub">₹0 mila</span></div><i class="fa-solid fa-chevron-right gm-chev"></i></div>
+      <div class="gm-menu-row" onclick="gmOpenPage('gmPageInstr')"><div class="gm-ic" style="background:#e8f1ff;color:#2f6fdb"><i class="fa-solid fa-comment-dots"></i></div><div class="gm-tx"><b>Instructions</b><span id="gmInsSub">Koi instruction nahi</span></div><i class="fa-solid fa-chevron-right gm-chev"></i></div>
+      <div class="gm-menu-row" onclick="gmOpenPage('gmPageBank')"><div class="gm-ic" style="background:#eafaf1;color:#16a34a"><i class="fa-solid fa-building-columns"></i></div><div class="gm-tx"><b>Bank Details</b><span>Account details save ya edit karo</span></div><i class="fa-solid fa-chevron-right gm-chev"></i></div>
+      <div class="gm-menu-row" onclick="gmOpenPage('gmPageRating')"><div class="gm-ic" style="background:#fff8d6;color:#d99a00"><i class="fa-solid fa-star"></i></div><div class="gm-tx"><b>Rating</b><span id="gmRateSub">Abhi koi rating nahi</span></div><i class="fa-solid fa-chevron-right gm-chev"></i></div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Order detail sheet -->
+<div class="modal" id="orderDetailModal">
+  <div class="sheet">
+    <i class="fa-solid fa-xmark close-x" onclick="closeOrderDetail()"></i>
+    <h2>Order Detail</h2>
+    <div id="orderDetailBody"></div>
+  </div>
+</div>
+
+<!-- Join confirmation / location hand-off -->
+<div id="joinLocationModal">
+  <div class="join-location-sheet">
+    <div class="pin"><i class="fa-solid fa-location-dot"></i></div>
+    <h3>Show your order location</h3>
+    <p>Order join ho gaya. Customer tak pahunchne ke liye live map kholo.</p>
+    <button type="button" onclick="seeJoinedOrderLocation()">See</button>
+    <button type="button" class="cancel" onclick="closeJoinLocationModal()">Later</button>
+  </div>
+</div>
+
+<!-- Full-screen live delivery map -->
+<div id="deliveryMapOverlay" aria-hidden="true">
+  <div id="deliveryMapFullscreen"></div>
+  <div class="delivery-map-top">
+    <button class="delivery-map-back" type="button" onclick="closeDeliveryMap()" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button>
+    <div class="delivery-map-status" id="deliveryMapStatus">Waiting for live location…</div>
+  </div>
+  <div class="delivery-map-bottom">
+    <b id="deliveryMapOrderText">Delivery route</b>
+    <div class="muted" id="deliveryMapDistanceText">Waiting for GPS…</div>
+    <div class="map-actions">
+      <button type="button" class="secondary" onclick="closeDeliveryMap()">Back</button>
+      <button type="button" onclick="focusDeliveryRoute()">Fit route</button>
+    </div>
+    <select class="deliver-select" id="mapDeliverSelect" onchange="handleDeliverSelect(this.value,activeMapKey||activeOrderId())" style="margin-top:8px">
+      <option value="">Delivery status…</option>
+      <option value="delivered">✅ Delivered</option>
+      <option value="cancelled">❌ Cancel / Unassign</option>
+    </select>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <div class="nav-item active" data-tab="homeView" onclick="switchTab('homeView',this)"><i class="fa-solid fa-house"></i>Home</div>
+  <div class="nav-item" data-tab="orderLocationView" onclick="switchTab('orderLocationView',this)"><i class="fa-solid fa-location-dot"></i>Order Location</div>
+  <div class="nav-item" data-tab="ordersView" onclick="switchTab('ordersView',this)"><i class="fa-solid fa-clock-rotate-left"></i>Orders</div>
+  <div class="nav-item" data-tab="profileView" onclick="switchTab('profileView',this)"><i class="fa-solid fa-user"></i>Profile</div>
+</div>
+
+
+<!-- ===== Gomandi rider: premium sub-pages (additive) ===== -->
+<div class="gm-page" id="gmPageTips" aria-hidden="true">
+  <div class="gm-page-head"><button type="button" class="gm-back" onclick="gmClosePage('gmPageTips')" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button><h2>Tips</h2></div>
+  <div class="gm-page-body" id="gmTipsBody"></div>
+</div>
+
+<div class="gm-page" id="gmPageInstr" aria-hidden="true">
+  <div class="gm-page-head"><button type="button" class="gm-back" onclick="gmClosePage('gmPageInstr')" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button><h2>Instructions</h2></div>
+  <div class="gm-page-body" id="gmInstrBody"></div>
+</div>
+
+<div class="gm-page" id="gmPageRating" aria-hidden="true">
+  <div class="gm-page-head"><button type="button" class="gm-back" onclick="gmClosePage('gmPageRating')" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button><h2>Rating</h2></div>
+  <div class="gm-page-body" id="gmRatingBody"></div>
+</div>
+
+<div class="gm-page" id="gmPageBank" aria-hidden="true">
+  <div class="gm-page-head"><button type="button" class="gm-back" onclick="gmClosePage('gmPageBank')" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button><h2>Bank Details</h2></div>
+  <div class="gm-page-body">
+    <div class="gm-card">
+      <div class="field"><label>Bank Name</label><input id="bankName" placeholder="e.g. SBI"></div>
+      <div class="field"><label>Account Holder Name</label><input id="bankHolder" placeholder="As per bank passbook"></div>
+      <div class="field"><label>Account Number</label><input id="bankAcc" placeholder="Account number" inputmode="numeric"></div>
+      <div class="field"><label>IFSC Code</label><input id="bankIfsc" placeholder="e.g. SBIN0001234"></div>
+      <button class="btn btn-solid" style="width:100%" onclick="saveBankDetails()">Save Bank Details</button>
+    </div>
+    <div class="payout-note"><i class="fa-solid fa-circle-info"></i>&nbsp; Save karte hi aap apne aap Profile par wapas chale jaoge.</div>
+  </div>
+</div>
+
+<div class="gm-page" id="gmPageOrder" aria-hidden="true">
+  <div class="gm-page-head"><button type="button" class="gm-back" onclick="gmClosePage('gmPageOrder')" aria-label="Back"><i class="fa-solid fa-arrow-left"></i></button><h2>Full detail</h2></div>
+  <div class="gm-page-body" id="gmOrderBody"></div>
+</div>
+
+<div id="gmPop" aria-hidden="true" onclick="if(event.target===this)gmClosePop()">
+  <div class="gm-pop-card">
+    <div class="gm-pop-ic"><i class="fa-solid fa-comment-dots"></i></div>
+    <h3>Delivery instruction</h3>
+    <div class="by" id="gmPopBy"></div>
+    <div class="gm-pop-text" id="gmPopText"></div>
+    <button type="button" onclick="gmClosePop()">Theek hai</button>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+/* ============================================================
+   FIREBASE — same project as the User App, so data (orders,
+   delivery.currentLocation, etc.) is fully shared/live between
+   both apps immediately.
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyC6Lr5tFasxTiOKQCAg9k2aEyf9-oiIGnk",
+  authDomain: "mandigomart.firebaseapp.com",
+  databaseURL: "https://mandigomart-default-rtdb.firebaseio.com",
+  projectId: "mandigomart",
+  storageBucket: "mandigomart.firebasestorage.app",
+  messagingSenderId: "476945286618",
+  appId: "1:476945286618:web:f519af3fb480cce777ace3",
+  measurementId: "G-0J65M21H3B"
+};
+if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+function db(){ return firebase.database(); }
+function safeKey(id){ return String(id).replace(/[.#$\[\]\/]/g,'_'); }
+
+/* ============================================================
+   TEMPORARY TEST IDENTITY (until real Google login + KYC is
+   wired in). Stored on this device only, in localStorage.
+   myId is what gets written as delivery.riderId in Firebase —
+   once login is added, this will simply be replaced with the
+   real Firebase Auth UID; nothing else in this file needs to
+   change.
+   ============================================================ */
+function uid(){
+  let id = localStorage.getItem('gomandi_test_partner_id');
+  if(!id){ try{ const m=document.cookie.match(/(?:^|; )gomandi_partner_id=([^;]+)/); if(m) id=decodeURIComponent(m[1]); }catch(e){} }
+  if(!id){ id = 'test_' + Math.random().toString(36).slice(2,10); }
+  try{ localStorage.setItem('gomandi_test_partner_id', id); }catch(e){}
+  try{ document.cookie='gomandi_partner_id='+encodeURIComponent(id)+'; max-age=31536000; path=/; SameSite=Lax'; }catch(e){}
+  return id;
+}
+function myName(){
+  let n = localStorage.getItem('gomandi_test_partner_name');
+  if(!n){
+    n = prompt('Test ke liye apna naam daalo (baad me Login/KYC se aayega):','Test Rider') || 'Test Rider';
+    localStorage.setItem('gomandi_test_partner_name', n);
+  }
+  return n;
+}
+function setMyName(n){ localStorage.setItem('gomandi_test_partner_name', n); render(); }
+function myPhone(){ return localStorage.getItem('gomandi_test_partner_phone') || ''; }
+function setMyPhone(p){ localStorage.setItem('gomandi_test_partner_phone', String(p||'').trim()); toast('Phone number saved.'); }
+const MY_ID = uid();
+
+function activeOrderId(){
+  var id = localStorage.getItem('gomandi_active_order_'+MY_ID) || null;
+  /* Firebase is the source of truth: a saved "active order" id is valid only while that order still exists,
+     is assigned to this rider and is not delivered/cancelled. A stale id (e.g. the order was deleted or
+     un-assigned) used to block every new Join with "Pehle apni current delivery poori karo". */
+  try{
+    if(id && ORDERS_LOADED){
+      var o = ALL_ORDERS[id];
+      if(!o || !(o.delivery && o.delivery.riderId===MY_ID) || isDeliveredStatus(o) || isCancelledStatus(o)){
+        localStorage.removeItem('gomandi_active_order_'+MY_ID);
+        return null;
+      }
+    }
+  }catch(e){}
+  return id;
+}
+function setActiveOrderId(id){
+  if(id) localStorage.setItem('gomandi_active_order_'+MY_ID, id);
+  else localStorage.removeItem('gomandi_active_order_'+MY_ID);
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastTimer=null;
+function toast(msg){
+  const el=document.getElementById('toastEl');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2200);
+}
+
+/* ============================================================
+   TAB SWITCHING
+   ============================================================ */
+function switchTab(id, elem){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(elem) elem.classList.add('active');
+}
+
+/* ============================================================
+   ORDERS — real-time listener (same 'orders' node as User App)
+   ============================================================ */
+let ALL_ORDERS = {};
+let ORDERS_LOADED = false;
+db().ref('orders').on('value', function(snap){
+  ALL_ORDERS = snap.val() || {};
+  ORDERS_LOADED = true;
+  render();
+});
+
+function ordersArray(){
+  return Object.keys(ALL_ORDERS).map(k=>Object.assign({_key:k}, ALL_ORDERS[k]));
+}
+function itemsOf(o){
+  if(!o) return [];
+  if(Array.isArray(o.items)) return o.items;
+  if(o.items && typeof o.items==='object') return Object.keys(o.items).map(k=>o.items[k]);
+  return [];
+}
+function itemName(i){ return i.title||i.name||i.productName||'Item'; }
+function itemImg(i){ return i.image||i.imageUrl||i.photo||i.productImage||''; }
+function customerAddress(o){ return o.deliveryAddress||o.address||o.deliveryAreaOnly||'Address not available'; }
+function customerName(o){ return o.receiverName||o.customerName||'Customer'; }
+function customerPhone(o){ return o.receiverPhone||o.customerPhone||''; }
+function customerEmail(o){ return o.receiverEmail||o.customerEmail||o.email||''; }
+function customerLoc(o){
+  const c=[o.customerLocation,o.deliveryLocation,o.customerCoordinates,o.destination,o.location];
+  for(const p of c){ if(p && p.lat!=null && p.lng!=null) return {lat:Number(p.lat),lng:Number(p.lng)}; }
+  return null;
+}
+function orderStatusLower(o){ return String(o.orderStatus||'placed').toLowerCase(); }
+function isDeliveredStatus(o){ var s=orderStatusLower(o); if(/out\s*for\s*deliver/.test(s)) return false; return s.indexOf('deliver')>=0; }
+function isCancelledStatus(o){ return orderStatusLower(o).indexOf('cancel')>=0 || orderStatusLower(o).indexOf('fail')>=0; }
+function tipOf(o){ var d=o&&o.delivery||{}; var b=o&&o.billBreakdown||{}; var v=(d.tip!=null&&d.tip!=='')?Number(d.tip):Number(b.deliveryTip||0); return isFinite(v)&&v>0?v:0; }
+function payPerOrder(){ return Number(window.__payPerOrder || 30); } // admin can override via settings/deliveryPayPerOrder
+
+db().ref('settings/deliveryPayPerOrder').on('value', s=>{ window.__payPerOrder = s.val() || 30; render(); });
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  document.getElementById('topbarWho').textContent = myName() + ' · Test ID: ' + MY_ID.slice(0,10);
+  renderHome();
+  renderOrderLocations();
+  renderHistory();
+  renderProfile();
+}
+
+function renderHome(){
+  const el = document.getElementById('homeContent');
+  const orders = ordersArray();
+  let activeId = activeOrderId();
+  let activeOrder = activeId ? orders.find(o=>o._key===activeId) : null;
+  // Firebase is the source of truth. If WebView/localStorage drops the
+  // temporary active id, recover the rider's assigned order automatically.
+  if(!activeOrder){
+    activeOrder = orders.find(o=>o.delivery && o.delivery.riderId===MY_ID && !isDeliveredStatus(o) && !isCancelledStatus(o)) || null;
+    if(activeOrder){ activeId=activeOrder._key; setActiveOrderId(activeId); }
+  }
+
+  let html='';
+
+  if(activeOrder && !isDeliveredStatus(activeOrder) && !isCancelledStatus(activeOrder)){
+    html += `<div class="empty-note"><i class="fa-solid fa-location-dot" style="font-size:26px;display:block;margin-bottom:8px;color:#16a34a"></i><b>Order joined successfully.</b><br>Your active delivery has moved to <b>Order Location</b>.<br><button type="button" class="btn btn-solid" style="margin-top:12px" onclick="switchTab('orderLocationView',document.querySelector('.nav-item[data-tab=\'orderLocationView\']'))">See Order Location</button></div>`;
+  } else {
+    if(activeOrder) setActiveOrderId(null); // was delivered/cancelled elsewhere — clear locally
+
+    const available = orders.filter(o=>{
+      const d = o.delivery||{};
+      return !d.riderId && !isDeliveredStatus(o) && !isCancelledStatus(o);
+    }).sort((a,b)=>Number(b.createdAt||b.timestamp||0)-Number(a.createdAt||a.timestamp||0));
+
+    if(!available.length){
+      html += '<div class="empty-note"><i class="fa-solid fa-box-open" style="font-size:26px;display:block;margin-bottom:8px;color:#bbb"></i>Abhi koi naya order nahi hai.<br>Naya order aate hi yahan turant dikhega.</div>';
+    } else {
+      html += '<div class="section-title">New Orders (' + available.length + ')</div>';
+      available.forEach(o=>{ html += renderOrderCard(o); });
+    }
+  }
+  el.innerHTML = html;
+}
+
+function renderOrderCard(o){
+  const items = itemsOf(o);
+  const firstItem = items[0] ? itemName(items[0]) : '';
+  const more = items.length>1 ? ' +' + (items.length-1) + ' more' : '';
+  return '<div class="card order-card" onclick="openOrderDetail(\''+o._key+'\')">' +
+    '<div class="order-top"><div><div class="order-id">Order #'+esc(o.orderId||o._key)+'</div>' +
+    '<div class="order-sub">'+esc(firstItem+more)+' · '+esc(o.paymentMethod||'')+'</div></div>' +
+    '<div style="font-weight:800;color:#16a34a">₹'+esc(o.totalAmount||o.amount||'')+'</div></div>' +
+    '<div class="order-addr"><i class="fa-solid fa-location-dot" style="color:#16a34a;margin-right:6px"></i>'+esc(customerAddress(o))+'</div>' +
+    '<div class="order-actions">' +
+      '<button class="btn btn-outline" onclick="event.stopPropagation();openOrderDetail(\''+o._key+'\')">Details</button>' +
+      '<button class="btn btn-solid" onclick="event.stopPropagation();joinOrder(\''+o._key+'\')">Join</button>' +
+    '</div></div>';
+}
+
+function renderActiveCard(o){
+  const d = o.delivery||{};
+  const loc = d.currentLocation;
+  const locText = loc && loc.lat!=null ? 'Live GPS connected' : 'Waiting for live GPS location';
+  return '<div class="card active-card">' +
+    '<div class="active-badge"><i class="fa-solid fa-motorcycle"></i> Active Delivery</div>' +
+    '<div class="order-id">Order #'+esc(o.orderId||o._key)+'</div>' +
+    '<div class="order-sub" style="margin-bottom:8px">'+esc(customerName(o))+' · '+esc(customerPhone(o))+'</div>' +
+    '<div class="order-addr"><i class="fa-solid fa-location-dot" style="color:#16a34a;margin-right:6px"></i>'+esc(customerAddress(o))+'</div>' +
+    '<div style="font-size:12px;color:#6d737c;margin-top:8px">'+esc(locText)+'</div>' +
+    '<div class="active-actions">' +
+      '<button class="btn btn-solid" onclick="openDeliveryMap(\''+o._key+'\')"><i class="fa-solid fa-map-location-dot"></i> Show live route</button>' +
+      '<select class="deliver-select" id="deliverSelect" onchange="handleDeliverSelect(this.value,\''+o._key+'\')">' +
+        '<option value="">Delivery status…</option>' +
+        '<option value="delivered">✅ Delivered</option>' +
+        '<option value="cancelled">❌ Cancel / Unassign</option>' +
+      '</select>' +
+    '</div>' +
+  '</div>';
+}
+
+function showJoinLocationModal(key){
+  setActiveOrderId(key);
+  window.__joinedOrderKey=key;
+  const m=document.getElementById('joinLocationModal');
+  if(m)m.classList.add('active');
+}
+function closeJoinLocationModal(){
+  const m=document.getElementById('joinLocationModal');
+  if(m)m.classList.remove('active');
+}
+function seeJoinedOrderLocation(){
+  const key=window.__joinedOrderKey||activeOrderId();
+  closeJoinLocationModal();
+  if(key)openDeliveryMap(key);
+}
+
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============================================================
+   ORDER DETAIL SHEET
+   ============================================================ */
+function openOrderDetail(key){
+  const o = ordersArray().find(x=>x._key===key);
+  if(!o) return;
+  const items = itemsOf(o);
+  let itemsHtml = items.map(i=>'<div class="item-row">'+(itemImg(i)?'<img src="'+esc(itemImg(i))+'">':'')+'<div class="nm">'+esc(itemName(i))+'</div></div>').join('') || '<div class="empty-note">No item details.</div>';
+
+  const b = o.billBreakdown || {};
+  const total = Number(b.grandTotal ?? o.totalAmount ?? o.amount ?? 0);
+  const itemsTotal = Number(b.itemsTotal ?? items.reduce((sum,i)=>sum + Number(i.price||0)*Number(i.qty||1),0));
+  const deliveryCharge = Number(b.deliveryCharge||0);
+  const handlingCharge = Number(b.handlingCharge||0);
+  const codExtra = Number(b.codExtraCharge||0);
+  const tip = tipOf(o);
+  const couponDiscount = Number(b.couponDiscount||0);
+  const discount = items.reduce((sum,i)=>sum + Math.max(0, Number(i.mrp||i.originalPrice||i.price||0)-Number(i.price||0))*Number(i.qty||1),0);
+  const detailRows =
+    '<div class="section-title" style="margin-top:14px">Customer details</div>' +
+    '<div class="detail-line"><i class="fa-solid fa-user"></i> '+esc(customerName(o))+'</div>' +
+    (customerPhone(o)?'<div class="detail-line"><i class="fa-solid fa-phone"></i> '+esc(customerPhone(o))+'</div>':'') +
+    (customerEmail(o)?'<div class="detail-line"><i class="fa-solid fa-envelope"></i> '+esc(customerEmail(o))+'</div>':'') +
+    (o.userId||o.uid||o.customerUid||o.customerId?'<div class="detail-line"><i class="fa-solid fa-id-card"></i> '+esc(o.userId||o.uid||o.customerUid||o.customerId)+'</div>':'') +
+    '<div class="detail-line"><i class="fa-solid fa-location-dot"></i> '+esc(customerAddress(o))+'</div>' +
+    '<div class="section-title" style="margin-top:14px">Items ('+items.length+')</div>' + itemsHtml +
+    '<div class="section-title" style="margin-top:14px">Bill summary</div>' +
+    '<div class="detail-line"><span>Item total</span><b>₹'+esc(itemsTotal)+'</b></div>' +
+    (discount?'<div class="detail-line"><span>Product discount</span><b style="color:#16833b">-₹'+esc(discount)+'</b></div>':'') +
+    '<div class="detail-line"><span>Handling charge</span><b>₹'+esc(handlingCharge)+'</b></div>' +
+    '<div class="detail-line"><span>Delivery charge</span><b>'+ (deliveryCharge?'₹'+esc(deliveryCharge):'FREE') +'</b></div>' +
+    (codExtra?'<div class="detail-line"><span>COD extra charge</span><b>₹'+esc(codExtra)+'</b></div>':'') +
+    (tip?'<div class="detail-line"><span>Delivery tip</span><b>₹'+esc(tip)+'</b></div>':'') +
+    (couponDiscount?'<div class="detail-line"><span>Coupon'+(b.couponCode?' ('+esc(b.couponCode)+')':'')+'</span><b style="color:#16833b">-₹'+esc(couponDiscount)+'</b></div>':'') +
+    '<div class="detail-line" style="font-size:16px;font-weight:900;border-top:1px solid #eee;margin-top:8px;padding-top:10px"><span>Grand total</span><b>₹'+esc(total)+'</b></div>' +
+    '<div class="section-title" style="margin-top:14px">Payment & order</div>' +
+    '<div class="detail-line"><i class="fa-solid fa-credit-card"></i> '+esc(o.paymentMethod||'—')+' · '+esc(o.paymentStatus||'')+'</div>' +
+    '<div class="detail-line"><i class="fa-solid fa-receipt"></i> Order ID: '+esc(o.orderId||o._key)+'</div>' +
+    (o.orderDate||o.createdAt||o.timestamp?'<div class="detail-line"><i class="fa-solid fa-clock"></i> '+esc(o.orderDate||new Date(Number(o.createdAt||o.timestamp)).toLocaleString('en-IN'))+'</div>':'');
+
+  document.getElementById('orderDetailBody').innerHTML = detailRows +
+    '<button class="btn btn-solid" style="width:100%;margin-top:14px" onclick="joinOrder(\''+key+'\');closeOrderDetail();">Join this order</button>';
+
+  document.getElementById('orderDetailModal').classList.add('active');
+}
+function closeOrderDetail(){ document.getElementById('orderDetailModal').classList.remove('active'); }
+
+/* ============================================================
+   JOIN / DELIVER ACTIONS
+   ============================================================ */
+function joinOrder(key){
+  if(activeOrderId() || ordersArray().some(o=>o.delivery && o.delivery.riderId===MY_ID && !isDeliveredStatus(o) && !isCancelledStatus(o))){
+    toast('Pehle apni current delivery poori karo.'); return;
+  }
+  if(!myPhone()){ toast('Pehle Profile me apna phone number save karo, taaki customer call kar sake.'); switchTab('profileView', document.querySelector('.nav-item[data-tab=\'profileView\']')); return; }
+  const order=ordersArray().find(o=>o._key===key);
+  if(!order){toast('Order nahi mila.');return;}
+  const updates = {
+    'delivery/riderId': MY_ID,
+    'delivery/riderName': myName(),
+    'delivery/riderPhone': myPhone(),
+    'delivery/status': 'Picked up, heading to you',
+    'delivery/assignedAt': Date.now(),
+    'orderStatus': 'Out for delivery'
+  };
+  db().ref('orders/'+key).update(updates).then(()=>{
+    setActiveOrderId(key);
+    window.__joinedOrderKey=key;
+    toast('Order join ho gaya — location tracking shuru.');
+    render();
+    showJoinLocationModal(key);
+    startFallbackGeo();
+  }).catch(e=>{ console.error(e); toast('Join fail hua: '+e.message); });
+}
+
+function handleDeliverSelect(val, key){
+  if(!val) return;
+  if(val==='delivered'){
+    if(!confirm('Confirm — order deliver ho gaya?')) { document.querySelectorAll('.deliver-select').forEach(function(x){x.value='';}); return; }
+    const deliveredAt=Date.now();
+    db().ref('orders/'+key).update({ orderStatus:'Order delivered', deliveredAt: deliveredAt, 'delivery/status':'Delivered', 'delivery/deliveredAt':deliveredAt, 'delivery/currentLocation':null }).then(()=>{
+      setActiveOrderId(null);
+      toast('Delivered! Order history me chala gaya.');
+      closeDeliveryMap();
+      teardownMap();
+      stopFallbackGeo();
+      render();
+    });
+  } else if(val==='cancelled'){
+    if(!confirm('Confirm — is order ko cancel/unassign karna hai?')) { document.querySelectorAll('.deliver-select').forEach(function(x){x.value='';}); return; }
+    db().ref('orders/'+key).update({
+      'delivery/riderId': null, 'delivery/riderName': null, 'delivery/riderPhone': null,
+      'delivery/status': null, 'delivery/currentLocation': null,
+      'orderStatus': 'Order placed'
+    }).then(()=>{
+      setActiveOrderId(null);
+      toast('Order un-assign ho gaya, wapas naye orders me dikhega.');
+      teardownMap();
+      render();
+    });
+  }
+}
+
+/* ============================================================
+   LIVE MAP — Mappls Web Maps JS + Mappls Routing API.
+   Firebase order/GPS flow is preserved. Mappls supplies the map,
+   Indian road geometry, POI/street labels and two-wheeler routing.
+   The red line is always recalculated from rider GPS to destination,
+   so the travelled portion disappears from the remaining route.
+   ============================================================ */
+let deliveryMap=null, myMarker=null, homeMarker=null, routeLine=null, activeMapKey=null, lastRiderPos=null, lastCustomerPos=null, routeRequestTimer=null;
+let fallbackWatchId=null, mapplsSdkPromise=null;
+
+function teardownMap(){
+  if(deliveryMap){try{deliveryMap.remove();}catch(e){}}
+  deliveryMap=null;myMarker=null;homeMarker=null;routeLine=null;lastRiderPos=null;lastCustomerPos=null;
+  if(routeRequestTimer)clearTimeout(routeRequestTimer);routeRequestTimer=null;
+}
+function mapplsToken(){return String(window.GOMANDI_MAPPLS_STATIC_KEY||'');}
+function mapplsReady(){return !!mapplsToken()&&mapplsToken().indexOf('PASTE_YOUR_')!==0;}
+function loadMapplsSdk(){
+  if(typeof mappls!=='undefined')return Promise.resolve();
+  if(!mapplsReady())return Promise.reject(new Error('Mappls static web key is not configured'));
+  if(mapplsSdkPromise)return mapplsSdkPromise;
+  mapplsSdkPromise=new Promise(function(resolve,reject){
+    var s=document.createElement('script');
+    s.src='https://sdk.mappls.com/map/sdk/web?v=3.0&access_token='+encodeURIComponent(mapplsToken());
+    s.async=true;s.defer=true;s.onload=function(){resolve();};s.onerror=function(){reject(new Error('Mappls Web SDK failed to load'));};
+    document.head.appendChild(s);
+  });
+  return mapplsSdkPromise;
+}
+function parseMapLink(link){
+  if(!link)return null;const s=String(link);let m=s.match(/@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+  if(!m)m=s.match(/[?&](?:q|query|ll)=(-?\d+(?:\.\d+)?)[,%20]+(-?\d+(?:\.\d+)?)/i);
+  if(!m)m=s.match(/(-?\d{1,3}\.\d{4,})\s*[, ]\s*(-?\d{1,3}\.\d{4,})/);
+  if(m)return {lat:Number(m[1]),lng:Number(m[2])};return null;
+}
+function rawCustomerLocation(o){
+  const c=[o&&o.customerLocation,o&&o.deliveryLocation,o&&o.customerCoordinates,o&&o.destination,o&&o.location,o&&o.delivery&&o.delivery.destinationLocation];
+  for(const p of c){if(p&&p.lat!=null&&p.lng!=null)return {lat:Number(p.lat),lng:Number(p.lng)};}return parseMapLink(o&&o.mapsLink);
+}
+async function geocodeCustomer(o){
+  const existing=rawCustomerLocation(o);if(existing)return existing;
+  const q=[o&&o.deliveryAddress,o&&o.deliveryAreaOnly,o&&o.deliveryCity].filter(Boolean).join(', ');
+  if(!q||!mapplsReady())return null;
+  try{
+    const url='https://search.mappls.com/search/address/geocode?address='+encodeURIComponent(q)+'&itemCount=1&region=ind&access_token='+encodeURIComponent(mapplsToken());
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});const data=await res.json();
+    const x=data&&data.copResults&&data.copResults[0];
+    if(x&&x.latitude!=null&&x.longitude!=null){const pos={lat:Number(x.latitude),lng:Number(x.longitude)};db().ref('orders/'+o._key+'/delivery/destinationLocation').set(pos).catch(()=>{});return pos;}
+  }catch(e){console.warn('Mappls destination geocode failed',e);}return null;
+}
+function markerHtml(kind){
+  return kind==='rider'?'<div class="mappls-rider-pin"><i class="fa-solid fa-motorcycle"></i></div>':'<div class="mappls-destination-pin"><i class="fa-solid fa-house"></i></div>';
+}
+function applyRoute(coords,fit){
+  if(!deliveryMap||!coords||!coords.length)return;
+  const path=coords.map(p=>({lat:Number(p[1]),lng:Number(p[0])}));
+  try{if(routeLine)mappls.remove({map:deliveryMap,layer:routeLine});}catch(e){}
+  routeLine=new mappls.Polyline({map:deliveryMap,path:path,strokeColor:'#e53935',strokeOpacity:1,strokeWeight:6,fitbounds:!!fit,fitboundOptions:{padding:100,duration:500}});
+}
+async function fetchRoute(lat,lng,customerPos,fit){
+  if(!deliveryMap||!customerPos||!mapplsReady())return;
+  const url='https://route.mappls.com/route/direction/route_eta/biking/'+encodeURIComponent(lng)+','+encodeURIComponent(lat)+';'+encodeURIComponent(customerPos.lng)+','+encodeURIComponent(customerPos.lat)+'?overview=full&geometries=geojson&steps=false&region=ind&access_token='+encodeURIComponent(mapplsToken());
+  try{
+    const res=await fetch(url,{headers:{'Accept':'application/json'}});const data=await res.json();
+    if(!data||!data.routes||!data.routes[0]||!deliveryMap)return;
+    const route=data.routes[0],coords=route.geometry&&route.geometry.coordinates;if(!coords||!coords.length)return;
+    applyRoute(coords,!!fit);
+    const km=Number(route.distance||0)/1000;const el=document.getElementById('deliveryMapDistanceText');
+    if(el)el.textContent=(km>=1?km.toFixed(1)+' km remaining':Math.round(route.distance||0)+' m remaining')+' • Mappls road route';
+    const eta=Number(route.duration||0),status=document.getElementById('deliveryMapStatus');
+    if(status)status.textContent='Live route active • '+(eta?Math.max(1,Math.round(eta/60))+' min ETA':'GPS connected');
+  }catch(e){const el=document.getElementById('deliveryMapDistanceText');if(el)el.textContent='Live GPS connected • route waiting';console.warn('Mappls Directions failed',e);}
+}
+async function ensureMap(customerPos){
+  const el=document.getElementById('deliveryMapFullscreen');
+  if(!el||!mapplsReady()){
+    if(el&&!mapplsReady())el.innerHTML='<div style="height:100%;display:flex;align-items:center;justify-content:center;padding:25px;text-align:center;background:#eef2f4;color:#5f6872;font-size:14px">Mappls Web key is not configured yet. Add the static Web key in the HTML and reload.</div>';
+    return;
+  }
+  await loadMapplsSdk();
+  if(!deliveryMap){
+    /* The container can briefly report 0 size right when this screen opens
+       (before the browser finishes laying it out) — creating the map at
+       that exact instant is what produced the rare "white screen, tiles
+       never show" reports. Wait for a real size first (checked every
+       50ms, up to 2s, then proceeds anyway) instead of guessing a delay. */
+    let tries=0;
+    while((el.offsetWidth<20||el.offsetHeight<20)&&tries<40){await new Promise(r=>setTimeout(r,50));tries++;}
+    deliveryMap=new mappls.Map(el,{center:customerPos?[customerPos.lat,customerPos.lng]:[22.57,88.36],zoom:13,zoomControl:true,location:true});
+    deliveryMap.addListener('load',()=>{if(lastRiderPos&&lastCustomerPos)fetchRoute(lastRiderPos.lat,lastRiderPos.lng,lastCustomerPos,true);});
+  }
+  if(customerPos){
+    if(!homeMarker)homeMarker=new mappls.Marker({map:deliveryMap,position:{lat:customerPos.lat,lng:customerPos.lng},width:38,height:42,html:markerHtml('home'),fitbounds:false});
+    else homeMarker.setPosition({lat:customerPos.lat,lng:customerPos.lng});
+    lastCustomerPos=customerPos;
+  }
+}
+function updateMyMarkerAndRoute(lat,lng,customerPos){
+  if(!deliveryMap)return;
+  if(!myMarker)myMarker=new mappls.Marker({map:deliveryMap,position:{lat,lng},width:44,height:44,html:markerHtml('rider'),fitbounds:false});
+  else myMarker.setPosition({lat,lng});
+  lastRiderPos={lat,lng};
+  if(customerPos){lastCustomerPos=customerPos;if(routeRequestTimer)clearTimeout(routeRequestTimer);routeRequestTimer=setTimeout(()=>fetchRoute(lat,lng,customerPos,false),120);}
+  else try{deliveryMap.panTo({lat,lng});}catch(e){}
+}
+async function openDeliveryMap(key){
+  const o=ordersArray().find(x=>x._key===key);if(!o)return;activeMapKey=key;setActiveOrderId(key);
+  const ov=document.getElementById('deliveryMapOverlay');if(ov){ov.classList.add('active');ov.setAttribute('aria-hidden','false');}
+  const title=document.getElementById('deliveryMapOrderText');if(title)title.textContent='Order #'+(o.orderId||key)+' • '+customerName(o);
+  const status=document.getElementById('deliveryMapStatus');if(status)status.textContent='Connecting Mappls + live GPS…';
+  teardownMap();activeMapKey=key;
+  if(!mapplsReady()){ensureMap(null);if(status)status.textContent='Mappls Web key missing — add it in HTML.';return;}
+  const destination=await geocodeCustomer(o);
+  await ensureMap(destination);
+  const current=(o.delivery&&o.delivery.currentLocation)||null;
+  if(current&&current.lat!=null&&current.lng!=null){const lat=Number(current.lat),lng=Number(current.lng);updateMyMarkerAndRoute(lat,lng,destination);if(destination)fetchRoute(lat,lng,destination,true);if(status)status.textContent='Live route active';}
+  else{if(status)status.textContent=destination?'Destination found • waiting for GPS…':'Waiting for GPS + destination…';startFallbackGeo();}
+  setTimeout(()=>{try{deliveryMap&&deliveryMap.resize&&deliveryMap.resize();}catch(e){}},250);
+}
+function closeDeliveryMap(){
+  const keepId=activeOrderId()||activeMapKey;const ov=document.getElementById('deliveryMapOverlay');
+  if(ov){ov.classList.remove('active');ov.setAttribute('aria-hidden','true');}teardownMap();
+  if(keepId){setActiveOrderId(keepId);window.__joinedOrderKey=keepId;}try{render();}catch(e){try{renderHome();}catch(_) {}}
+}
+function focusDeliveryRoute(){if(deliveryMap&&lastRiderPos&&lastCustomerPos){fetchRoute(lastRiderPos.lat,lastRiderPos.lng,lastCustomerPos,true);return;}if(deliveryMap&&lastRiderPos)try{deliveryMap.panTo({lat:lastRiderPos.lat,lng:lastRiderPos.lng});}catch(e){}}
+function pushLiveLocation(lat,lng,acc){
+  lat=Number(lat);lng=Number(lng);acc=Number(acc)||0;if(!isFinite(lat)||!isFinite(lng))return;
+  const activeId=activeOrderId()||activeMapKey;if(!activeId)return;const now=Date.now();
+  db().ref('orders/'+activeId+'/delivery/currentLocation').set({lat,lng,accuracy:acc,updatedAt:now}).catch(()=>{});
+  const o=ordersArray().find(x=>x._key===activeId);const destination=(o&&rawCustomerLocation(o))||lastCustomerPos;
+  const status=document.getElementById('deliveryMapStatus');if(status)status.textContent='Live route active • GPS '+Math.round(acc)+'m';
+  if(deliveryMap){if(destination)ensureMap(destination);updateMyMarkerAndRoute(lat,lng,destination);}
+}
+
+window.setNativeLocation=function(lat,lng,acc){
+  const el=document.getElementById('gpsIndicator');if(el){el.style.opacity='1';el.style.color='#16a34a';}
+  pushLiveLocation(lat,lng,acc);
+};
+function startFallbackGeo(){
+  if(fallbackWatchId!==null || !navigator.geolocation)return;
+  fallbackWatchId=navigator.geolocation.watchPosition(function(pos){
+    pushLiveLocation(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy||0);
+  },function(){}, {enableHighAccuracy:true,maximumAge:3000,timeout:15000});
+}
+function stopFallbackGeo(){
+  if(fallbackWatchId!==null&&navigator.geolocation){try{navigator.geolocation.clearWatch(fallbackWatchId);}catch(e){}}
+  fallbackWatchId=null;
+}
+
+/* ============================================================
+   ORDER LOCATION — persistent joined-order screen
+   The Firebase riderId is the durable source of truth. This screen is
+   intentionally separate from Home so a joined order remains available
+   after the delivery app is closed/reopened until Delivered or Cancelled.
+   ============================================================ */
+function renderOrderLocations(){
+  const el=document.getElementById('orderLocationContent');
+  if(!el)return;
+  const joined=ordersArray().filter(o=>o.delivery&&o.delivery.riderId===MY_ID&&!isDeliveredStatus(o)&&!isCancelledStatus(o));
+  if(!joined.length){
+    el.innerHTML='<div class="empty-note"><i class="fa-solid fa-location-dot" style="font-size:26px;display:block;margin-bottom:8px;color:#bbb"></i>No joined order yet.<br>Join an order from Home and it will stay here until delivery is completed.</div>';
+    return;
+  }
+  el.innerHTML=joined.map(function(o){
+    const d=o.delivery||{};
+    const loc=d.currentLocation;
+    const gps=loc&&loc.lat!=null?'Live GPS connected':'Waiting for live GPS location';
+    return '<div class="card active-card" style="margin-bottom:12px">'+
+      '<div class="active-badge"><i class="fa-solid fa-location-dot"></i> Joined • Order Location</div>'+
+      '<div class="order-id">Order #'+esc(o.orderId||o._key)+'</div>'+
+      '<div class="order-sub" style="margin-bottom:8px">'+esc(customerName(o))+' · '+esc(customerPhone(o))+'</div>'+
+      '<div class="order-addr"><i class="fa-solid fa-location-dot" style="color:#16a34a;margin-right:6px"></i>'+esc(customerAddress(o))+'</div>'+
+      '<div style="font-size:12px;color:#6d737c;margin-top:8px">'+esc(gps)+'</div>'+
+      '<div class="order-actions" style="margin-top:10px">'+
+        '<button class="btn btn-solid" onclick="openDeliveryMap(\''+o._key+'\')"><i class="fa-solid fa-map-location-dot"></i> See location</button>'+
+        '<button class="btn btn-outline" onclick="openJoinedDetail(\''+o._key+'\')"><i class="fa-solid fa-circle-info"></i> Details</button>'+
+      '</div>'+
+      '<select class="deliver-select" onchange="handleDeliverSelect(this.value,\''+o._key+'\')">'+
+        '<option value="">Delivery status…</option>'+
+        '<option value="delivered">✅ Delivered</option>'+
+        '<option value="cancelled">❌ Cancel / Unassign</option>'+
+      '</select>'+
+    '</div>';
+  }).join('');
+}
+
+/* ============================================================
+   HISTORY / PROFILE
+   ============================================================ */
+function renderHistory(){
+  const el = document.getElementById('historyCard');
+  const active = ordersArray().find(o=>o.delivery && o.delivery.riderId===MY_ID && !isDeliveredStatus(o) && !isCancelledStatus(o));
+  const mine = ordersArray().filter(o => o.delivery && o.delivery.riderId===MY_ID && isDeliveredStatus(o))
+    .sort((a,b)=>Number(b.deliveredAt||0)-Number(a.deliveredAt||0));
+  let out='';
+  if(active){
+    out += '<div class="section-title">Current delivery</div>'+renderActiveCard(active);
+  }
+  if(!mine.length && !active){ el.innerHTML='<div class="empty-note">No deliveries yet.</div>'; return; }
+  out += mine.length?'<div class="section-title" style="margin-top:14px">Delivery History</div>':'';
+  out += mine.map(o=>{
+    const dt = o.deliveredAt ? new Date(Number(o.deliveredAt)).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}) : '';
+    const tip=tipOf(o); const total=payPerOrder()+tip; return '<div class="hist-row"><div class="hist-left"><b>Order #'+esc(o.orderId||o._key)+'</b><div>'+esc(dt)+(tip?' · Tip se ₹'+tip+' mila':'')+'</div></div><div class="hist-amt">+₹'+total+'</div></div>';
+  }).join('');
+  el.innerHTML=out;
+}
+
+function renderProfile(){
+  const n = myName();
+  document.getElementById('profileNameText').textContent = n;
+  document.getElementById('profileAvatarLetter').textContent = n.charAt(0).toUpperCase();
+  const phoneInput = document.getElementById('profilePhone');
+  if(phoneInput && document.activeElement !== phoneInput){ phoneInput.value = myPhone(); }
+  const delivered = ordersArray().filter(o => o.delivery && o.delivery.riderId===MY_ID && isDeliveredStatus(o));
+  document.getElementById('statDelivered').textContent = delivered.length;
+  const base=delivered.length*payPerOrder(); const assignedTips=delivered.reduce((sum,o)=>sum+tipOf(o),0); document.getElementById('statEarnings').textContent = '₹' + (base+assignedTips);
+}
+
+function editMyName(){
+  const n = prompt('Naam update karo:', myName());
+  if(n) setMyName(n);
+}
+
+function loadBankDetails(){
+  db().ref('deliveryPartners/'+MY_ID+'/bank').once('value').then(s=>{
+    const b = s.val();
+    if(b){
+      document.getElementById('bankName').value = b.bankName||'';
+      document.getElementById('bankHolder').value = b.holder||'';
+      document.getElementById('bankAcc').value = b.account||'';
+      document.getElementById('bankIfsc').value = b.ifsc||'';
+    }
+  });
+}
+function saveBankDetails(){
+  const payload = {
+    bankName: document.getElementById('bankName').value.trim(),
+    holder: document.getElementById('bankHolder').value.trim(),
+    account: document.getElementById('bankAcc').value.trim(),
+    ifsc: document.getElementById('bankIfsc').value.trim(),
+    updatedAt: Date.now()
+  };
+  db().ref('deliveryPartners/'+MY_ID+'/bank').set(payload).then(()=>{
+    toast('Bank details saved.');
+    if(window.gmClosePage)setTimeout(function(){gmClosePage('gmPageBank');},450);
+  }).catch(e=>toast('Save fail hua: '+e.message));
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+loadBankDetails();
+render();
+// Native Kodular bridge remains the primary GPS source; browser GPS is a fallback.
+startFallbackGeo();
+</script>
+
+
+<!-- ================================================================
+     DELIVERY LIVE DESTINATION + GPS RECOVERY PATCH v2026-09-28
+     ADDITIVE ONLY: no existing delivery system is removed.
+     ================================================================ -->
+<script id="delivery-live-location-recovery-patch-2026-09-28">
+(function(){
+  'use strict';
+  if(window.__gomandiDeliveryRecoveryPatch)return;
+  window.__gomandiDeliveryRecoveryPatch=true;
+  function requestNow(){
+    try{if(typeof startFallbackGeo==='function')startFallbackGeo();}catch(e){}
+    try{
+      if(navigator.geolocation&&typeof activeOrderId==='function'&&activeOrderId()){
+        navigator.geolocation.getCurrentPosition(function(pos){
+          if(typeof pushLiveLocation==='function')pushLiveLocation(pos.coords.latitude,pos.coords.longitude,pos.coords.accuracy||0);
+        },function(){},{enableHighAccuracy:true,timeout:12000,maximumAge:5000});
+      }
+    }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(requestNow,300);});
+  else setTimeout(requestNow,300);
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(requestNow,200);});
+  window.addEventListener('focus',function(){setTimeout(requestNow,200);});
+})();
+</script>
+
+
+
+<!-- ================================================================
+     GOMANDI DELIVERY TARGETED DESTINATION + PERSISTENCE PATCH v2026-09-29
+     ADDITIVE ONLY: customer destination, remaining red route, persistent
+     joined-order location access. No existing delivery feature is removed.
+     ================================================================ -->
+<script id="gomandi-delivery-targeted-route-patch-2026-09-29">
+(function(){
+  'use strict';
+  if(window.__gomandiDeliveryTargetPatch)return;
+  window.__gomandiDeliveryTargetPatch=true;
+
+  function dbOk(){return typeof firebase!=='undefined'&&firebase.apps&&firebase.apps.length;}
+  function key(v){return String(v==null?'':v).replace(/[.#$\[\]\/]/g,'_');}
+  function destination(o){
+    if(!o)return null;
+    var a=[o.delivery&&o.delivery.destinationLocation,o.customerLocation,o.deliveryLocation,o.customerCoordinates,o.destination,o.location];
+    for(var i=0;i<a.length;i++){var p=a[i];if(p&&isFinite(Number(p.lat))&&isFinite(Number(p.lng)))return {lat:Number(p.lat),lng:Number(p.lng)};}
+    return null;
+  }
+
+  /* Keep the joined order recoverable after the map is closed or the app is
+     reopened. Firebase riderId is the durable source of truth; localStorage
+     remains the fast path. */
+  function recoverJoined(){
+    try{
+      var id=activeOrderId();
+      if(id){window.__joinedOrderKey=id;return;}
+      var list=ordersArray();
+      var mine=list.find(function(o){return o.delivery&&o.delivery.riderId===MY_ID&&!isDeliveredStatus(o)&&!isCancelledStatus(o);});
+      if(mine){setActiveOrderId(mine._key);window.__joinedOrderKey=mine._key;}
+    }catch(e){}
+  }
+
+  /* Destination may be written by the User App after the rider has already
+     joined. Update the open Mappls map immediately when that happens. */
+  if(dbOk()){
+    try{
+      db().ref('orders').on('value',function(snap){
+        ALL_ORDERS=snap.val()||{};
+        recoverJoined();
+        try{render();}catch(e){}
+        var id=activeMapKey||activeOrderId();
+        if(!id||!deliveryMap)return;
+        var o=ordersArray().find(function(x){return x._key===id;});
+        var c=destination(o);
+        if(!c)return;
+        lastCustomerPos=c;
+        if(homeMarker){try{homeMarker.setPosition({lat:c.lat,lng:c.lng});}catch(e){}}
+        else{
+          try{homeMarker=new mappls.Marker({map:deliveryMap,position:{lat:c.lat,lng:c.lng},width:38,height:42,html:markerHtml('home'),fitbounds:false});}catch(e){}
+        }
+        if(lastRiderPos){
+          if(routeRequestTimer)clearTimeout(routeRequestTimer);
+          routeRequestTimer=setTimeout(function(){fetchRoute(lastRiderPos.lat,lastRiderPos.lng,c,false);},80);
+        }
+      });
+    }catch(e){}
+  }
+
+  /* Reopen the durable active order directly from Orders/History. */
+  var oldRenderActive=window.renderActiveCard;
+  if(typeof oldRenderActive==='function'&&!oldRenderActive.__targetPatch){
+    window.renderActiveCard=function(o){
+      var html=oldRenderActive.apply(this,arguments);
+      return html;
+    };
+    window.renderActiveCard.__targetPatch=true;
+  }
+
+  /* Add a clearly visible location action to the persistent Current delivery
+     card without touching the existing status/delivery selector. */
+  function addLocationButton(){
+    try{
+      document.querySelectorAll('.active-card .active-actions').forEach(function(box){
+        if(box.querySelector('.target-persistent-location-btn'))return;
+        var sel=box.querySelector('.deliver-select');
+        var b=document.createElement('button');
+        b.type='button';b.className='btn btn-outline target-persistent-location-btn';
+        b.innerHTML='<i class="fa-solid fa-location-dot"></i> See location';
+        b.onclick=function(){var card=this.closest('.active-card');var id=activeOrderId();if(!id&&card){id=window.__joinedOrderKey;}if(id)openDeliveryMap(id);};
+        if(sel)box.insertBefore(b,sel);else box.appendChild(b);
+      });
+    }catch(e){}
+  }
+  var oldRender=window.render;
+  if(typeof oldRender==='function'&&!oldRender.__targetPatch){
+    window.render=function(){var r=oldRender.apply(this,arguments);setTimeout(addLocationButton,0);return r;};
+    window.render.__targetPatch=true;
+  }
+
+  /* If the app is reopened, automatically recover the joined order before
+     the first interaction. */
+  function boot(){recoverJoined();setTimeout(function(){addLocationButton();try{renderOrderLocations();}catch(e){}},150);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){recoverJoined();setTimeout(function(){addLocationButton();try{renderOrderLocations();}catch(e){}},120);}});
+})();
+</script>
+
+
+<!-- ================================================================
+     GOMANDI DELIVERY — CUSTOMER PIN + RED ROUTE FALLBACK PATCH v2026-09-30
+     ADDITIVE ONLY: nothing is removed. Adds (1) customer destination
+     fallback (Firebase -> Mappls -> OpenStreetMap address search),
+     (2) red route fallback (Mappls -> OSRM -> straight red line),
+     (3) auto-retry of destination while the map is open.
+     ================================================================ -->
+<script id="gomandi-delivery-pin-route-fallback-2026-09-30">
+(function(){
+  'use strict';
+  if(window.__gomandiPinRouteFallback0930)return;
+  window.__gomandiPinRouteFallback0930=true;
+
+  function okPos(p){return p&&isFinite(Number(p.lat))&&isFinite(Number(p.lng))&&!(Number(p.lat)===0&&Number(p.lng)===0);}
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+  function haversine(a,b){
+    var R=6371000,t=Math.PI/180,dLat=(b.lat-a.lat)*t,dLng=(b.lng-a.lng)*t;
+    var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dLng/2)*Math.sin(dLng/2);
+    return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+  }
+
+  /* ---------- customer destination fallback ---------- */
+  var geoCache={}, geoTries={};
+  async function osmGeocode(o){
+    var parts=String(o&&o.deliveryAddress||'').split(',').map(function(x){return x.trim();}).filter(Boolean);
+    var qs=[];
+    if(parts.length)qs.push(parts.join(', '));
+    for(var i=1;i<parts.length&&qs.length<4;i++)qs.push(parts.slice(i).join(', '));
+    if(o&&o.deliveryAreaOnly&&o.deliveryCity)qs.push(o.deliveryAreaOnly+', '+o.deliveryCity);
+    var seen={};
+    for(var j=0;j<qs.length;j++){
+      var q=qs[j];if(!q||seen[q])continue;seen[q]=1;
+      try{
+        var res=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=in&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+        var arr=await res.json();
+        if(arr&&arr[0]){var p={lat:Number(arr[0].lat),lng:Number(arr[0].lon)};if(okPos(p))return p;}
+      }catch(e){}
+      await sleep(1100);
+    }
+    return null;
+  }
+  var origGeocode=window.geocodeCustomer;
+  window.geocodeCustomer=async function(o){
+    var p=null;
+    try{p=await origGeocode(o);}catch(e){}
+    if(okPos(p))return p;
+    var k=o&&o._key;
+    if(k){
+      try{
+        var a=await db().ref('orders/'+k+'/delivery/destinationLocation').once('value');
+        if(okPos(a.val()))return {lat:Number(a.val().lat),lng:Number(a.val().lng)};
+        var b=await db().ref('orders/'+k+'/customerLocation').once('value');
+        if(okPos(b.val()))return {lat:Number(b.val().lat),lng:Number(b.val().lng)};
+      }catch(e){}
+      if(geoCache[k])return geoCache[k];
+      if((geoTries[k]||0)>=2)return null;
+      geoTries[k]=(geoTries[k]||0)+1;
+    }
+    var g=await osmGeocode(o);
+    if(okPos(g)&&k)geoCache[k]=g;
+    return g;
+  };
+
+  /* ---------- red route with fallbacks ---------- */
+  var routeSeq=0;
+  async function getRoute(lat,lng,c){
+    if(mapplsReady()){
+      try{
+        var url='https://route.mappls.com/route/direction/route_eta/biking/'+encodeURIComponent(lng)+','+encodeURIComponent(lat)+';'+encodeURIComponent(c.lng)+','+encodeURIComponent(c.lat)+'?overview=full&geometries=geojson&steps=false&region=ind&access_token='+encodeURIComponent(mapplsToken());
+        var r=await fetch(url,{headers:{'Accept':'application/json'}});var d=await r.json();
+        var rt=d&&d.routes&&d.routes[0];
+        if(rt&&rt.geometry&&rt.geometry.coordinates&&rt.geometry.coordinates.length)return {coords:rt.geometry.coordinates,distance:Number(rt.distance||0),duration:Number(rt.duration||0),src:'Mappls road route'};
+      }catch(e){}
+    }
+    try{
+      var u2='https://router.project-osrm.org/route/v1/driving/'+lng+','+lat+';'+c.lng+','+c.lat+'?overview=full&geometries=geojson';
+      var r2=await fetch(u2);var d2=await r2.json();
+      var rt2=d2&&d2.routes&&d2.routes[0];
+      if(rt2&&rt2.geometry&&rt2.geometry.coordinates&&rt2.geometry.coordinates.length){
+        var co=rt2.geometry.coordinates.slice();
+        co.unshift([lng,lat]);co.push([c.lng,c.lat]);
+        return {coords:co,distance:Number(rt2.distance||0),duration:Number(rt2.duration||0),src:'road route'};
+      }
+    }catch(e){}
+    var dist=haversine({lat:lat,lng:lng},c);
+    return {coords:[[lng,lat],[c.lng,c.lat]],distance:dist,duration:dist/5.5,src:'straight line'};
+  }
+  window.fetchRoute=async function(lat,lng,customerPos,fit){
+    if(!deliveryMap||!okPos(customerPos))return;
+    var my=++routeSeq;
+    var rt=await getRoute(Number(lat),Number(lng),customerPos);
+    if(my!==routeSeq||!deliveryMap||!rt)return;
+    applyRoute(rt.coords,!!fit);
+    var km=rt.distance/1000;
+    var el=document.getElementById('deliveryMapDistanceText');
+    if(el)el.textContent=(km>=1?km.toFixed(1)+' km remaining':Math.round(rt.distance)+' m remaining')+' • '+rt.src;
+    var st=document.getElementById('deliveryMapStatus');
+    if(st)st.textContent='Live route active • '+(rt.duration?Math.max(1,Math.round(rt.duration/60))+' min ETA':'GPS connected');
+  };
+
+  /* ---------- keep looking for the customer pin while the map is open ---------- */
+  setInterval(async function(){
+    try{
+      if(!deliveryMap||!activeMapKey||lastCustomerPos)return;
+      var o=ordersArray().find(function(x){return x._key===activeMapKey;});
+      if(!o)return;
+      var d=await window.geocodeCustomer(o);
+      if(!okPos(d)||!deliveryMap||lastCustomerPos)return;
+      await ensureMap(d);
+      lastCustomerPos=d;
+      if(lastRiderPos)fetchRoute(lastRiderPos.lat,lastRiderPos.lng,d,true);
+    }catch(e){}
+  },5000);
+})();
+</script>
+
+<!-- ================================================================
+     GOMANDI RIDER — TIPS / INSTRUCTIONS / RATING / BANK PAGES v2026-10-10
+     ADDITIVE: new pages with fade + slide animation. Existing delivery,
+     map, join and history logic is untouched.
+     ================================================================ -->
+<script id="gomandi-rider-premium-pages-2026-10-10">
+(function(){
+  'use strict';
+  if(window.__gmRiderPagesV1)return;
+  window.__gmRiderPagesV1=true;
+
+  function $(id){return document.getElementById(id);}
+  function money(n){return '₹'+Number(n||0).toLocaleString('en-IN');}
+  function fmt(ts){
+    if(!ts)return '';
+    try{return new Date(Number(ts)).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});}catch(e){return '';}
+  }
+  function mine(){return ordersArray().filter(function(o){return o.delivery&&o.delivery.riderId===MY_ID;});}
+  function instrOf(o){return String(o&&o.delivery&&o.delivery.instructions||'').trim();}
+  function whenOf(o){
+    var d=o.delivery||{};
+    return Number(d.instructionsUpdatedAt||d.deliveredAt||o.deliveredAt||d.assignedAt||o.createdAt||o.timestamp||0);
+  }
+  function itemsLine(o){
+    var it=itemsOf(o);
+    if(!it.length)return 'Item details nahi mili';
+    var names=it.slice(0,3).map(itemName).join(', ');
+    return names+(it.length>3?' +'+(it.length-3)+' more':'');
+  }
+  function rateOf(o){
+    var r=o&&o.delivery&&o.delivery.rating;
+    if(r==null)return 0;
+    var n=Number(typeof r==='object'?r.rating:r);
+    return isFinite(n)?Math.max(0,Math.min(5,n)):0;
+  }
+  function stars(n){
+    var s='';for(var i=1;i<=5;i++)s+='<span class="'+(i<=Math.round(n)?'':'off')+'">★</span>';
+    return '<span class="gm-stars">'+s+'</span>';
+  }
+  function callLink(p){
+    p=String(p||'').trim();
+    return p?'<a href="tel:'+esc(p)+'" style="color:#16a34a;font-weight:800;text-decoration:none">'+esc(p)+'</a>':'';
+  }
+
+  /* ---------- page open / close (fade + slide) ---------- */
+  var openStack=[];
+  window.gmOpenPage=function(id){
+    var el=$(id);if(!el)return;
+    gmRenderPage(id);
+    el.style.display='flex';
+    void el.offsetWidth;
+    el.classList.add('show');
+    el.setAttribute('aria-hidden','false');
+    if(openStack.indexOf(id)<0)openStack.push(id);
+    var b=el.querySelector('.gm-page-body');if(b)b.scrollTop=0;
+  };
+  window.gmClosePage=function(id){
+    var el=$(id);if(!el)return;
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden','true');
+    openStack=openStack.filter(function(x){return x!==id;});
+    setTimeout(function(){if(!el.classList.contains('show'))el.style.display='none';},320);
+  };
+  function gmRenderPage(id){
+    if(id==='gmPageTips')renderTips();
+    else if(id==='gmPageInstr')renderInstr();
+    else if(id==='gmPageRating')renderRating();
+    else if(id==='gmPageOrder')renderOrderFull(window.__gmOrderKey);
+  }
+
+  /* ---------- Tips ---------- */
+  function tipStats(){
+    var list=mine().filter(function(o){return tipOf(o)>0;});
+    var got=0,wait=0;
+    list.forEach(function(o){if(isDeliveredStatus(o))got+=tipOf(o);else wait+=tipOf(o);});
+    return {list:list,got:got,wait:wait};
+  }
+  function renderTips(){
+    var box=$('gmTipsBody');if(!box)return;
+    var st=tipStats();
+    var list=st.list.sort(function(a,b){return whenOf(b)-whenOf(a);});
+    var html='<div class="gm-card gm-sum"><div class="sub">Total tips mile</div><div class="big">'+money(st.got)+'</div>'+
+      '<div class="sub">'+list.filter(isDeliveredStatus).length+' customer ne tip diya</div>'+
+      (st.wait?'<div class="sub2">'+money(st.wait)+' tip delivery complete hone par judega</div>':'')+'</div>';
+    if(!list.length){
+      html+='<div class="gm-empty"><i class="fa-solid fa-hand-holding-dollar"></i>Abhi kisi customer ne tip nahi diya.<br>Tip milte hi yahan poori detail ke saath dikhega.</div>';
+    }else{
+      html+=list.map(function(o){
+        var done=isDeliveredStatus(o);
+        return '<div class="gm-card">'+
+          '<div class="gm-top"><div><b>'+esc(customerName(o))+'</b><div class="ph">'+esc(customerPhone(o)||'Number nahi mila')+'</div></div><div class="gm-amt">+'+money(tipOf(o))+'</div></div>'+
+          '<div class="gm-line"><i class="fa-solid fa-location-dot"></i><span>'+esc(customerAddress(o))+'</span></div>'+
+          '<div class="gm-line"><i class="fa-solid fa-bag-shopping"></i><span>'+esc(itemsLine(o))+'</span></div>'+
+          '<div class="gm-foot"><span>Order #'+esc(o.orderId||o._key)+(whenOf(o)?' · '+esc(fmt(whenOf(o))):'')+'</span><span class="gm-chip '+(done?'ok':'wait')+'">'+(done?'Mil gaya':'Delivery ke baad')+'</span></div>'+
+        '</div>';
+      }).join('');
+    }
+    box.innerHTML=html;
+  }
+
+  /* ---------- Instructions ---------- */
+  function renderInstr(){
+    var box=$('gmInstrBody');if(!box)return;
+    var list=mine().filter(function(o){return instrOf(o);}).sort(function(a,b){return whenOf(b)-whenOf(a);});
+    if(!list.length){
+      box.innerHTML='<div class="gm-empty"><i class="fa-solid fa-comment-dots"></i>Abhi kisi customer ne instruction nahi bheja.<br>Jo order aapne join kiya hai uska instruction yahan aayega.</div>';
+      return;
+    }
+    box.innerHTML=list.map(function(o){
+      var done=isDeliveredStatus(o);
+      return '<div class="gm-card">'+
+        '<div class="gm-top"><div><b>'+esc(customerName(o))+'</b><div class="ph">'+esc(customerPhone(o)||'Number nahi mila')+' · Order #'+esc(o.orderId||o._key)+'</div></div>'+
+        '<span class="gm-chip '+(done?'ok':'wait')+'">'+(done?'Delivered':'Active')+'</span></div>'+
+        '<div class="gm-btnrow">'+
+          '<button type="button" class="o" data-k="'+esc(o._key)+'" onclick="gmShowOrder(this.getAttribute(\'data-k\'))">Full detail</button>'+
+          '<button type="button" data-k="'+esc(o._key)+'" onclick="gmShowInstr(this.getAttribute(\'data-k\'))">View instruction</button>'+
+        '</div></div>';
+    }).join('');
+  }
+  window.gmShowInstr=function(key){
+    var o=ordersArray().find(function(x){return x._key===key;});if(!o)return;
+    $('gmPopBy').textContent=customerName(o)+' · Order #'+(o.orderId||o._key);
+    $('gmPopText').textContent=instrOf(o)||'Koi instruction nahi.';
+    var p=$('gmPop');p.style.display='flex';void p.offsetWidth;p.classList.add('show');p.setAttribute('aria-hidden','false');
+  };
+  window.gmClosePop=function(){
+    var p=$('gmPop');p.classList.remove('show');p.setAttribute('aria-hidden','true');
+    setTimeout(function(){if(!p.classList.contains('show'))p.style.display='none';},280);
+  };
+
+  /* ---------- Full order detail page ---------- */
+  window.gmShowOrder=function(key){window.__gmOrderKey=key;gmOpenPage('gmPageOrder');};
+  function renderOrderFull(key){
+    var box=$('gmOrderBody');if(!box)return;
+    var o=ordersArray().find(function(x){return x._key===key;});
+    if(!o){box.innerHTML='<div class="gm-empty">Order nahi mila.</div>';return;}
+    var items=itemsOf(o),ins=instrOf(o),tip=tipOf(o),b=o.billBreakdown||{};
+    var total=Number(b.grandTotal!=null?b.grandTotal:(o.totalAmount!=null?o.totalAmount:(o.amount||0)));
+    var active=!!(o.delivery&&o.delivery.riderId===MY_ID&&!isDeliveredStatus(o)&&!isCancelledStatus(o));
+    var html='';
+    if(ins)html+='<div class="gm-ins-box"><b>Customer ka instruction</b>'+esc(ins)+'</div>';
+    html+='<div class="gm-sec">Customer</div><div class="gm-card">'+
+      '<div class="gm-kv"><span>Naam</span><b>'+esc(customerName(o))+'</b></div>'+
+      '<div class="gm-kv"><span>Number</span><b>'+(callLink(customerPhone(o))||'—')+'</b></div>'+
+      (customerEmail(o)?'<div class="gm-kv"><span>Email</span><b>'+esc(customerEmail(o))+'</b></div>':'')+
+      '<div class="gm-kv"><span>Address</span><b>'+esc(customerAddress(o))+'</b></div>'+
+      (active?'<div class="gm-btnrow"><button type="button" onclick="gmSeeLocation(\''+esc(key)+'\')"><i class="fa-solid fa-map-location-dot"></i> See location</button></div>':'')+
+    '</div>';
+    html+='<div class="gm-sec">Order ('+items.length+' item)</div><div class="gm-card">'+
+      (items.length?items.map(function(i){
+        return '<div class="gm-item">'+(itemImg(i)?'<img src="'+esc(itemImg(i))+'" alt="">':'')+'<div>'+esc(itemName(i))+'</div>'+(i.qty?'<div class="q">x'+esc(i.qty)+'</div>':'')+'</div>';
+      }).join(''):'<div class="gm-empty" style="padding:14px">Item details nahi mili.</div>')+
+    '</div>';
+    html+='<div class="gm-sec">Payment</div><div class="gm-card">'+
+      '<div class="gm-kv"><span>Order ID</span><b>#'+esc(o.orderId||o._key)+'</b></div>'+
+      '<div class="gm-kv"><span>Payment</span><b>'+esc(o.paymentMethod||'—')+(o.paymentStatus?' · '+esc(o.paymentStatus):'')+'</b></div>'+
+      (tip?'<div class="gm-kv"><span>Tip</span><b style="color:#16a34a">'+money(tip)+'</b></div>':'')+
+      '<div class="gm-kv"><span>Total</span><b>'+money(total)+'</b></div>'+
+    '</div>';
+    box.innerHTML=html;
+  }
+  window.gmSeeLocation=function(key){
+    ['gmPageOrder','gmPageInstr','gmPageTips','gmPageRating','gmPageBank'].forEach(function(id){gmClosePage(id);});
+    try{switchTab('orderLocationView',document.querySelector('.nav-item[data-tab="orderLocationView"]'));}catch(e){}
+    openDeliveryMap(key);
+  };
+
+  /* ---------- Rating ---------- */
+  function ratingStats(){
+    var list=mine().filter(function(o){return isDeliveredStatus(o)&&rateOf(o)>0;});
+    var sum=list.reduce(function(s,o){return s+rateOf(o);},0);
+    return {list:list,count:list.length,avg:list.length?sum/list.length:0};
+  }
+  function renderRating(){
+    var box=$('gmRatingBody');if(!box)return;
+    var st=ratingStats();
+    var html='<div class="gm-card gm-sum"><div class="sub">Aapki average rating</div><div class="big">'+(st.count?st.avg.toFixed(1):'—')+(st.count?' <span style="font-size:20px">★</span>':'')+'</div><div class="sub">'+(st.count?st.count+' customer ratings':'Abhi koi rating nahi mili')+'</div></div>';
+    if(!st.count){
+      html+='<div class="gm-empty"><i class="fa-solid fa-star"></i>Customer delivery ke baad rating dega,<br>wo yahan dikhegi.</div>';
+    }else{
+      html+=st.list.sort(function(a,b){return Number((b.delivery.rating&&b.delivery.rating.ratedAt)||whenOf(b))-Number((a.delivery.rating&&a.delivery.rating.ratedAt)||whenOf(a));}).map(function(o){
+        var at=(o.delivery.rating&&o.delivery.rating.ratedAt)||whenOf(o);
+        return '<div class="gm-card"><div class="gm-top"><div><b>'+esc(customerName(o))+'</b><div class="ph">Order #'+esc(o.orderId||o._key)+(at?' · '+esc(fmt(at)):'')+'</div></div><div>'+stars(rateOf(o))+'</div></div></div>';
+      }).join('');
+    }
+    box.innerHTML=html;
+  }
+
+  /* ---------- Profile menu subtitles + live refresh of open pages ---------- */
+  function gmRefresh(){
+    var t=tipStats(),n=mine().filter(function(o){return instrOf(o);}).length,r=ratingStats();
+    var a=$('gmTipsSub'),b=$('gmInsSub'),c=$('gmRateSub');
+    if(a)a.textContent=money(t.got)+' mila'+(t.wait?' · '+money(t.wait)+' baaki':'');
+    if(b)b.textContent=n?(n+' instruction'+(n>1?'s':'')):'Koi instruction nahi';
+    if(c)c.textContent=r.count?(r.avg.toFixed(1)+' ★ · '+r.count+' rating'+(r.count>1?'s':'')):'Abhi koi rating nahi';
+    openStack.slice().forEach(function(id){try{gmRenderPage(id);}catch(e){}});
+  }
+  var __oldRender=window.render;
+  if(typeof __oldRender==='function'){
+    window.render=function(){var r=__oldRender.apply(this,arguments);try{gmRefresh();}catch(e){}return r;};
+  }
+  setTimeout(function(){try{gmRefresh();}catch(e){}},0);
+
+  /* ---------- Order Location: Details button (joined order) ---------- */
+  window.openJoinedDetail=function(key){
+    openOrderDetail(key);
+    var body=$('orderDetailBody');if(!body)return;
+    Array.prototype.slice.call(body.querySelectorAll('button')).forEach(function(b){if(/Join this order/i.test(b.textContent))b.parentNode.removeChild(b);});
+    var o=ordersArray().find(function(x){return x._key===key;});
+    var ins=instrOf(o);
+    if(ins)body.insertAdjacentHTML('afterbegin','<div class="gm-ins-box"><b>Customer ka instruction</b>'+esc(ins)+'</div>');
+  };
+})();
+</script>
+
+<style id="gm-delivery-nav-v1-style">
+#gmVehBack{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.5);display:none}#gmVehBack.on{display:block}
+#gmVehSheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(92vw,420px);max-height:86vh;overflow:auto;z-index:99999;background:#fff;border-radius:22px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:none}
+#gmVehSheet.on{display:block}
+#gmVehSheet h4{margin:0 0 10px;font-size:16px}
+.gm-veh-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}
+.gm-veh{flex:1 0 74px;border:2px solid #e5e8ec;border-radius:14px;padding:8px 4px;text-align:center;background:#fff;font:inherit}
+.gm-veh.sel{border-color:#16a34a;background:#f0fdf4}
+.gm-veh i,.gm-veh .em{display:block;font-size:22px;color:#16a34a;line-height:26px}
+.gm-veh b{display:block;font-size:12px;margin-top:2px}.gm-veh span{font-size:11px;color:#6b7280}
+#gmVehInfo{margin:8px 2px;font-size:13px;color:#374151}
+.gm-sheet-btns{display:flex;gap:8px}.gm-sheet-btns button{flex:1;padding:12px;border-radius:12px;border:0;font-weight:800;font-size:14px}
+.gm-start{background:#16a34a;color:#fff}.gm-close{background:#f1f3f5;color:#111}
+#gmNavBar{position:absolute;left:12px;right:12px;top:calc(76px + env(safe-area-inset-top,0px));z-index:25;display:none;background:#14532d;color:#fff;border-radius:14px;padding:10px 12px}
+#gmNavBar.on{display:block}#gmNavBar .t{font-size:11px;opacity:.85;font-weight:700;letter-spacing:.4px}
+#gmNavBar .m{font-size:16px;font-weight:800;margin-top:2px}#gmNavBar .r{display:flex;gap:8px;margin-top:8px}
+#gmNavBar button{flex:1;border:0;border-radius:10px;padding:7px;font-weight:700;background:rgba(255,255,255,.18);color:#fff}
+.gm-call-btn{background:#fff!important;color:#16a34a!important;border:2px solid #16a34a!important}
+#gmCancelModal{position:fixed;inset:0;z-index:100001;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}#gmCancelModal.on{display:flex}#gmCancelModal .bx{background:#fff;border-radius:20px;padding:20px;width:100%;max-width:340px;text-align:center}#gmCancelModal h3{margin:0 0 8px;color:#b91c1c}#gmCancelModal p{margin:0 0 14px;font-size:14px;color:#374151}
+#gmOtpModal{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:20px}
+#gmOtpModal.on{display:flex}#gmOtpModal .bx{background:#fff;border-radius:20px;padding:20px;width:100%;max-width:340px;text-align:center}
+#gmOtpModal h3{margin:0 0 6px}#gmOtpModal p{margin:0 0 12px;font-size:13px;color:#6b7280}
+#gmOtpIn{width:100%;font-size:30px;letter-spacing:14px;text-align:center;padding:10px;border:2px solid #cbd5e1;border-radius:12px}
+#gmOtpMsg{min-height:18px;margin:8px 0;font-size:13px;color:#dc2626;font-weight:700}
+</style>
+<script id="gm-delivery-v3">(function(){"use strict";
+var $=function(i){return document.getElementById(i)};
+/* NOTE: this block never overrides a map / route / GPS function of the page. It only observes them. */
+/* ===== A. Stop the page rebuilding itself every GPS tick (this is what closed dropdowns + keyboard) ===== */
+var origRender=window.render,pend=false,lastSig="";
+function sig(){try{return JSON.stringify(ALL_ORDERS,function(k,v){return k==="currentLocation"?void 0:v})+"|"+(typeof activeOrderId==="function"?activeOrderId():"")+"|"+(window.__joinedOrderKey||"")+"|"+(typeof myName==="function"?myName():"")+"|"+(typeof myPhone==="function"?myPhone():"")+"|"+(window.__payPerOrder||"")}catch(e){return String(Math.random())}}
+function typing(){var a=document.activeElement;return !!(a&&/^(SELECT|INPUT|TEXTAREA)$/.test(a.tagName)&&a.id!=="gmOtpIn")}
+function flush(){if(!pend||typing())return;pend=false;lastSig="";try{window.render()}catch(e){}}
+if(typeof origRender==="function"){window.render=function(){chkCancel();if(typing()){pend=true;return}var s=sig();if(s===lastSig)return;lastSig=s;return origRender.apply(this,arguments)};
+ document.addEventListener("focusout",function(){setTimeout(flush,400)},true);document.addEventListener("change",function(){setTimeout(flush,600)},true)}
+
+/* ===== B. observe the route the page already draws (response is cloned, page code untouched) ===== */
+var RT=null,VEH={bike:{n:"Bike",ic:"fa-motorcycle",sp:30},scooty:{n:"Scooty",em:"\uD83D\uDEF5",sp:28},car:{n:"Car",ic:"fa-car",sp:25},cycle:{n:"Cycle",ic:"fa-bicycle",sp:12},walk:{n:"Walk",ic:"fa-person-walking",sp:4.8}},veh="bike";
+try{var sv=localStorage.getItem("gmVeh");if(sv&&VEH[sv])veh=sv}catch(e){}
+var N={live:false,voice:true,said:{},ti:0,idx:0,pos:null,spd:0,hist:[],etaAt:0,rrAt:0};
+var oFetch=window.fetch;
+window.fetch=function(u){var p=oFetch.apply(this,arguments);try{var s=typeof u==="string"?u:(u&&u.url)||"";if(/route_eta|route_adv|\/route\/v1\//.test(s)){p.then(function(r){try{r.clone().json().then(cap).catch(function(){})}catch(e){}}).catch(function(){})}}catch(e){}return p};
+function hv(a,b){var R=6371000,r=Math.PI/180,dl=(b.lat-a.lat)*r,dg=(b.lng-a.lng)*r,x=Math.sin(dl/2)*Math.sin(dl/2)+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dg/2)*Math.sin(dg/2);return 2*R*Math.asin(Math.sqrt(x))}
+function bear(a,b){var r=Math.PI/180,y=Math.sin((b.lng-a.lng)*r)*Math.cos(b.lat*r),x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lng-a.lng)*r);return(Math.atan2(y,x)/r+360)%360}
+function build(co){var P=co.map(function(c){return{lat:c[1],lng:c[0]}}),cum=[0],i;for(i=1;i<P.length;i++)cum[i]=cum[i-1]+hv(P[i-1],P[i]);
+ var T=[];for(i=1;i<P.length-1;i++){var a=i;while(a>0&&cum[i]-cum[a]<30)a--;var b=i;while(b<P.length-1&&cum[b]-cum[i]<30)b++;if(a===i||b===i)continue;
+  var d=((bear(P[i],P[b])-bear(P[a],P[i])+540)%360)-180;if(Math.abs(d)<30)continue;var l=T[T.length-1];if(l&&cum[i]-l.s<35){if(Math.abs(d)>Math.abs(l.d))T[T.length-1]={s:cum[i],d:d}}else T.push({s:cum[i],d:d})}
+ return{P:P,cum:cum,T:T,len:cum[cum.length-1]}}
+function cap(j){var r=j&&j.routes&&j.routes[0],co=r&&r.geometry&&r.geometry.coordinates;if(!co||co.length<2)return;var b=build(co),same=RT&&RT.P.length===b.P.length&&RT.P[0].lat===b.P[0].lat&&RT.len===b.len;if(same)return;
+ var had=!!RT;RT=b;N.ti=0;N.idx=0;N.said={};if(had&&N.live&&Date.now()-N.rrAt>25000){N.rrAt=Date.now();speak("Rerouting",true)}}
+function snap(p){if(!RT)return null;var P=RT.P,k=Math.cos(p.lat*Math.PI/180),best={d:1e12,i:0,s:0},lo=Math.max(0,N.idx-6),hi=Math.min(P.length-2,N.idx+400),pass;
+ for(pass=0;pass<2;pass++){for(var i=lo;i<=hi;i++){var a=P[i],c=P[i+1],ax=a.lng*k,ay=a.lat,bx=c.lng*k,by=c.lat,px=p.lng*k,py=p.lat,dx=bx-ax,dy=by-ay,t=dx||dy?((px-ax)*dx+(py-ay)*dy)/(dx*dx+dy*dy):0;t=Math.max(0,Math.min(1,t));
+   var q={lat:ay+dy*t,lng:(ax+dx*t)/k},d=hv(p,q);if(d<best.d)best={d:d,i:i,s:RT.cum[i]+hv(a,q)}}
+  if(best.d<60||pass)break;lo=0;hi=P.length-2}
+ return best}
+/* ===== C. voice: one voice at a time, never repeats, announces BEFORE the turn (distance along the road, scaled by speed) ===== */
+var SP={last:0,txt:"",at:0};
+function speak(t,urgent){if(!N.live||!N.voice||!window.speechSynthesis)return;var now=Date.now();if(t===SP.txt&&now-SP.at<20000)return;if(!urgent&&now-SP.last<2500)return;
+ try{if(speechSynthesis.speaking||speechSynthesis.pending){if(!urgent)return;speechSynthesis.cancel()}SP.txt=t;SP.at=now;SP.last=now;var u=new SpeechSynthesisUtterance(t);u.lang="en-IN";u.rate=1;speechSynthesis.speak(u)}catch(e){}}
+function dirText(d){var a=Math.abs(d),s=d>0?"right":"left";if(a>=160)return"make a U-turn";if(a>=120)return"take a sharp "+s;if(a>=60)return"turn "+s;return"bear "+s}
+function vms(){return VEH[veh].sp/3.6}
+function tick(p,acc){N.pos=p;var now=Date.now();N.hist.push({p:p,t:now});while(N.hist.length>2&&now-N.hist[0].t>30000)N.hist.shift();
+ if(N.hist.length>1){var f=N.hist[0],dd=hv(f.p,p),dt=(now-f.t)/1000;N.spd=dt>4?dd/dt:N.spd}
+ var sn=snap(p);if(!sn)return;N.idx=sn.i;var rem=Math.max(0,RT.len-sn.s),sec=rem/Math.max(1.2,N.spd>2.5?(0.5*N.spd+0.5*vms()):vms());
+ sendEta(rem,sec);if(!N.live)return;
+ var spd=Math.max(N.spd,veh==="walk"?1.2:3),far=Math.max(170,spd*11),near=Math.max(55,spd*4.5),T=RT.T;
+ while(N.ti<T.length&&T[N.ti].s<sn.s-8)N.ti++;
+ if(N.ti<T.length){var t=T[N.ti],dist=t.s-sn.s,bar=$("gmNavMsg");if(bar)bar.textContent=(dist>=1000?(dist/1000).toFixed(1)+" km":Math.round(dist)+" m")+" \u2022 "+dirText(t.d);
+  if(dist<=near&&!N.said[N.ti+"n"]){N.said[N.ti+"n"]=1;N.said[N.ti+"f"]=1;speak(dirText(t.d).replace(/^./,function(c){return c.toUpperCase()})+" now",true)}
+  else if(dist<=far&&dist>near&&!N.said[N.ti+"f"]){N.said[N.ti+"f"]=1;speak("In "+(Math.round(dist/50)*50)+" meters, "+dirText(t.d))}}
+ else{var bar2=$("gmNavMsg");if(bar2)bar2.textContent=(rem>=1000?(rem/1000).toFixed(1)+" km":Math.round(rem)+" m")+" \u2022 Seedha chalte raho"}
+ if(rem<=30&&!N.said.arr){N.said.arr=1;speak("You have arrived at the destination",true)}
+ if(deliveryMap&&N.live){try{deliveryMap.panTo({lat:p.lat,lng:p.lng});if(!N.zoomed){N.zoomed=1;deliveryMap.setZoom(17)}}catch(e){}}}
+function sendEta(rem,sec){var now=Date.now();if(now-N.etaAt<8000||!isFinite(sec)||sec<=0)return;N.etaAt=now;try{var id=(typeof activeOrderId==="function"&&activeOrderId())||activeMapKey;if(id)db().ref("orders/"+id+"/delivery").update({eta:now+sec*1000,etaMinutes:Math.max(1,Math.ceil(sec/60)),distLeft:Math.round(rem),etaMode:veh,etaAt:now})}catch(e){}}
+/* own GPS listener, only while the map screen is open (the page's GPS code is not touched) */
+var wid=null;
+function watch(on){if(on&&wid===null&&navigator.geolocation)wid=navigator.geolocation.watchPosition(function(g){tick({lat:g.coords.latitude,lng:g.coords.longitude},g.coords.accuracy||0)},function(){},{enableHighAccuracy:true,maximumAge:0,timeout:20000});else if(!on&&wid!==null){navigator.geolocation.clearWatch(wid);wid=null}}
+setInterval(function(){var ov=$("deliveryMapOverlay"),open=!!(ov&&ov.classList.contains("active"));watch(open);if(!open){if(N.live)gmNav.stop();RT=null;N.ti=0;N.idx=0}},1500);
+/* ===== D. vehicle popup (centered), Call button, live navigation bar ===== */
+function fmtT(s){var m=Math.max(1,Math.round(s/60));return m>=60?Math.floor(m/60)+" hr "+(m%60)+" min":m+" min"}
+function fmtD(m){return m>=1000?(m/1000).toFixed(1)+" km":Math.round(m)+" m"}
+function ui(){if($("gmVehSheet"))return;var ov=$("deliveryMapOverlay");if(!ov)return;
+ var sh=document.createElement("div");sh.id="gmVehSheet";sh.innerHTML='<h4>Kaise jaana hai?</h4><div class="gm-veh-row" id="gmVehRow"></div><div id="gmVehInfo"></div><div class="gm-sheet-btns"><button class="gm-close" type="button" onclick="gmNav.close()">Close</button><button class="gm-start" type="button" onclick="gmNav.start()">Start live navigation</button></div>';document.body.appendChild(sh);
+ var bk=document.createElement("div");bk.id="gmVehBack";bk.onclick=function(){gmNav.close()};document.body.appendChild(bk);
+ var nb=document.createElement("div");nb.id="gmNavBar";nb.innerHTML='<div class="t">LIVE NAVIGATION ON</div><div class="m" id="gmNavMsg">Route follow ho raha hai</div><div class="r"><button type="button" onclick="gmNav.voice()" id="gmVoiceBtn">Voice: ON</button><button type="button" onclick="gmNav.stop()">Stop</button></div>';ov.appendChild(nb);
+ var act=ov.querySelector(".map-actions");if(act&&!$("gmCallBtn")){var b=document.createElement("button");b.type="button";b.id="gmCallBtn";b.className="gm-call-btn";b.innerHTML='<i class="fa-solid fa-phone"></i> Call';b.onclick=function(){gmNav.call()};act.appendChild(b)}}
+function remNow(){if(!RT)return null;var sn=N.pos&&snap(N.pos);return sn?Math.max(0,RT.len-sn.s):RT.len}
+function row(){var h="",rem=remNow();Object.keys(VEH).forEach(function(k){var m=VEH[k];h+='<button type="button" class="gm-veh'+(k===veh?" sel":"")+'" onclick="gmNav.pick(\''+k+'\')">'+(m.em?'<span class="em">'+m.em+'</span>':'<i class="fa-solid '+m.ic+'"></i>')+'<b>'+m.n+'</b><span>'+(rem==null?"\u2026":fmtT(rem/(m.sp/3.6)))+'</span></button>'});
+ $("gmVehRow").innerHTML=h;$("gmVehInfo").textContent=rem==null?"Route aane ka wait hai\u2026":fmtD(rem)+" \u2022 "+VEH[veh].n+" se "+fmtT(rem/vms())}
+var oFocus=window.focusDeliveryRoute;
+window.focusDeliveryRoute=function(){try{if(oFocus)oFocus.apply(this,arguments)}catch(e){}ui();if(!$("gmVehSheet"))return;row();$("gmVehBack").classList.add("on");$("gmVehSheet").classList.add("on")};
+window.gmNav={close:function(){var s=$("gmVehSheet"),b=$("gmVehBack");if(s)s.classList.remove("on");if(b)b.classList.remove("on")},
+ pick:function(k){veh=k;try{localStorage.setItem("gmVeh",k)}catch(e){}row()},
+ start:function(){N.live=true;N.zoomed=0;N.said={};N.ti=0;this.close();var b=$("gmNavBar");if(b)b.classList.add("on");speak("Navigation started",true)},
+ stop:function(){N.live=false;try{speechSynthesis.cancel()}catch(e){}var b=$("gmNavBar");if(b)b.classList.remove("on")},
+ voice:function(){N.voice=!N.voice;$("gmVoiceBtn").textContent="Voice: "+(N.voice?"ON":"OFF");if(!N.voice)try{speechSynthesis.cancel()}catch(e){}},
+ call:function(){var o=ordersArray().find(function(x){return x._key===(activeMapKey||activeOrderId())}),ph=o&&customerPhone(o);if(!ph){toast("Customer ka number nahi mila");return}location.href="tel:"+String(ph).replace(/[^\d+]/g,"")}};
+document.addEventListener("click",function(e){var t=e.target;if(t&&t.closest&&t.closest("#deliveryMapOverlay"))setTimeout(ui,0)},true);
+setInterval(ui,1500);
+var CUT=Date.parse("2026-10-27T08:30:00+05:30"),oArr=window.ordersArray;
+function keep(o){if(!o)return false;if(o.otpHash)return true;var s=String(o.orderStatus||"").toLowerCase();if(s.indexOf("deliver")>=0&&!/out\s*for\s*deliver/.test(s))return true;return Number(o.createdAt||o.timestamp||0)>=CUT}
+if(typeof oArr==="function")window.ordersArray=function(){return oArr.apply(this,arguments).filter(keep)};
+/* ===== customer cancelled while rider is on the way: instant popup (Call / Confirm) ===== */
+var LAST=null,SEEN={},oAct=window.activeOrderId,oSet=window.setActiveOrderId;
+/* a hidden old order must never count as "your current delivery" (it used to block every Join) */
+if(typeof oAct==="function")window.activeOrderId=function(){var r=oAct.apply(this,arguments);if(r){var o=ALL_ORDERS[r];if(o&&!keep(o)){try{localStorage.removeItem("gomandi_active_order_"+MY_ID)}catch(e){}return null}LAST=r}return r};
+if(typeof oSet==="function")window.setActiveOrderId=function(id){if(id)LAST=id;return oSet.apply(this,arguments)};
+function cancelBox(id,o){if(!$("gmCancelModal")){var m=document.createElement("div");m.id="gmCancelModal";m.innerHTML='<div class="bx"><h3>\u274C Order cancel ho gaya</h3><p id="gmCancelTxt"></p><div class="gm-sheet-btns"><button class="gm-close" type="button" onclick="gmCancel.call()">Call customer</button><button class="gm-start" type="button" onclick="gmCancel.ok()">Confirm</button></div></div>';document.body.appendChild(m)}
+ $("gmCancelTxt").textContent="Customer ne order #"+(o.orderId||id)+" cancel kar diya hai. Ab delivery mat karo. Pata karna ho to customer ko call karo, phir Confirm dabao.";$("gmCancelModal").classList.add("on");window.__gmCancelId=id;try{navigator.vibrate&&navigator.vibrate([300,150,300,150,300])}catch(e){}try{speak("Order cancelled by the customer",true)}catch(e){}}
+window.gmCancel={call:function(){var id=window.__gmCancelId,o=ordersArray().find(function(x){return x._key===id})||ALL_ORDERS[id]||{},ph=o&&customerPhone(o);if(ph)location.href="tel:"+String(ph).replace(/[^\d+]/g,"");else toast("Customer ka number nahi mila")},
+ ok:function(){var id=window.__gmCancelId;$("gmCancelModal").classList.remove("on");try{gmNav.stop();gmNav.close()}catch(e){}try{closeDeliveryMap()}catch(e){}try{localStorage.removeItem("gomandi_active_order_"+MY_ID)}catch(e){}LAST=null;try{db().ref("orders/"+id+"/delivery/cancelAck").set(Date.now())}catch(e){}try{switchTab("homeView",document.querySelector('.nav-item[data-tab="homeView"]'))}catch(e){}lastSig="";try{window.render()}catch(e){}}};
+function chkCancel(){try{if(!LAST||SEEN[LAST])return;var o=ALL_ORDERS[LAST];if(!o||!(o.delivery&&o.delivery.riderId===MY_ID))return;if(/cancel/.test(String(o.orderStatus||"").toLowerCase())){SEEN[LAST]=1;cancelBox(LAST,o)}}catch(e){}}
+/* ===== D. Delivered only with the customer's 4-digit OTP ===== */
+var LEGACY_BEFORE=Date.parse("2026-10-26T00:00:00+05:30");
+function sha(s){if(window.crypto&&crypto.subtle&&window.TextEncoder)return crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)).then(function(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return("0"+x.toString(16)).slice(-2)}).join("")});var h=5381;for(var i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return Promise.resolve("d"+h)}
+var oDel=window.handleDeliverSelect,tries={},cur=null;
+function clearSel(){document.querySelectorAll(".deliver-select").forEach(function(x){x.value=""})}
+function modal(){if($("gmOtpModal"))return;var m=document.createElement("div");m.id="gmOtpModal";m.innerHTML='<div class="bx"><h3>Delivery OTP</h3><p>Customer se unka 4 digit OTP maango aur yahan daalo.</p><input id="gmOtpIn" type="tel" inputmode="numeric" maxlength="4" autocomplete="one-time-code" placeholder="\u2022\u2022\u2022\u2022"><div id="gmOtpMsg"></div><div class="gm-sheet-btns"><button class="gm-close" type="button" onclick="gmOtp.cancel()">Cancel</button><button class="gm-start" type="button" onclick="gmOtp.verify()">Confirm delivery</button></div></div>';document.body.appendChild(m)}
+window.gmOtp={cancel:function(){$("gmOtpModal").classList.remove("on");clearSel();cur=null},
+ verify:function(){var key=cur,v=($("gmOtpIn").value||"").replace(/\D/g,""),msg=$("gmOtpMsg"),t=tries[key]||{n:0,u:0};if(Date.now()<t.u){msg.textContent="Bahut galat try. "+Math.ceil((t.u-Date.now())/1000)+" sec ruko.";return}
+  if(v.length!==4){msg.textContent="4 digit OTP daalo";return}msg.textContent="Check ho raha hai\u2026";
+  Promise.all([db().ref("orders/"+key+"/otpHash").once("value"),sha(key+":"+v)]).then(function(r){if(r[0].val()&&r[0].val()===r[1]){gmOtp.cancel();finish(key)}else{t.n++;if(t.n>=5){t.u=Date.now()+60000;t.n=0}tries[key]=t;msg.textContent="OTP galat hai. Customer se dobara poochho."}}).catch(function(){msg.textContent="Network error, dobara try karo"})}};
+function finish(key){db().ref("orders/"+key).update({otpVerifiedAt:Date.now()}).catch(function(){});var oc=window.confirm;window.confirm=function(){return true};try{oDel.call(window,"delivered",key)}finally{window.confirm=oc}}
+if(typeof oDel==="function")window.handleDeliverSelect=function(val,key){if(val!=="delivered")return oDel.apply(this,arguments);clearSel();modal();cur=key;$("gmOtpIn").value="";$("gmOtpMsg").textContent="Check ho raha hai\u2026";
+ db().ref("orders/"+key).once("value").then(function(s){var o=s.val()||{};if(o.otpHash){$("gmOtpMsg").textContent="";$("gmOtpModal").classList.add("on");setTimeout(function(){$("gmOtpIn").focus()},150)}
+  else{var ts=Number(o.createdAt||o.timestamp||o.placedAt||o.orderTime||o.orderDate||0);if(ts&&ts<LEGACY_BEFORE){if(window.confirm("Purana order (OTP nahi hai) \u2014 deliver ho gaya?")){var oc=window.confirm;window.confirm=function(){return true};try{oDel.call(window,"delivered",key)}finally{window.confirm=oc}}}
+   else{$("gmOtpMsg").textContent="Customer ka OTP abhi bana nahi. Customer se app mein order tracking kholne ko bolo, phir dobara try karo.";$("gmOtpModal").classList.add("on")}}})};
+})();</script>
+
+<style id="gm-delivery-auth-style">
+#gmLogin,#gmOnb,#gmMe{position:fixed;inset:0;z-index:100050;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
+#gmLogin.on,#gmOnb.on,#gmMe.on{display:block}
+#gmLogin{background:linear-gradient(160deg,#052e16 0%,#14532d 45%,#16a34a 100%);display:none;align-items:center;justify-content:center;padding:24px}
+#gmLogin.on{display:flex}
+#gmLogin .orb{position:absolute;border-radius:50%;background:rgba(255,255,255,.07)}#gmLogin .o1{width:260px;height:260px;top:-70px;right:-80px}#gmLogin .o2{width:200px;height:200px;bottom:-60px;left:-60px}
+.gm-lcard{position:relative;width:100%;max-width:360px;background:#fff;border-radius:26px;padding:26px 22px 20px;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+.gm-llogo{width:74px;height:74px;border-radius:22px;background:linear-gradient(135deg,#16a34a,#14532d);margin:-62px auto 12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:32px;box-shadow:0 10px 24px rgba(22,163,74,.45)}
+.gm-lbadge{display:inline-block;background:#dcfce7;color:#14532d;font:800 11px/1 system-ui;letter-spacing:1.4px;padding:7px 12px;border-radius:99px;margin-bottom:10px}
+.gm-lcard h2{margin:0 0 6px;font-size:23px;color:#0f172a}.gm-lcard p{margin:0 0 18px;color:#64748b;font-size:14px;line-height:1.45}
+#gmGoogleBtn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;border:1.5px solid #dbe2ea;background:#fff;border-radius:14px;padding:14px;font:700 15px system-ui;color:#111}
+#gmGoogleBtn[disabled]{opacity:.6}#gmGoogleBtn .g{width:24px;height:24px;border-radius:50%;background:#4285f4;color:#fff;font:800 14px/24px system-ui}
+#gmLoginStatus{min-height:18px;margin-top:12px;font-size:13px;color:#64748b}.gm-lfoot{margin-top:14px;font-size:12px;color:#94a3b8}
+#gmOnb,#gmMe{background:#f3f4f6}.gm-wrap{max-width:520px;margin:0 auto;padding:16px 16px 40px}
+.gm-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}.gm-back{width:40px;height:40px;border-radius:50%;border:0;background:#fff;font-size:20px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.gm-top h2{margin:0;font-size:19px}.gm-steps{display:flex;gap:6px;margin:6px 0 16px}.gm-steps i{flex:1;height:5px;border-radius:9px;background:#d1d5db}.gm-steps i.on{background:#16a34a}
+.gm-card2{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.gm-card2 label{display:block;font-size:12px;font-weight:700;color:#475569;margin:12px 0 5px}.gm-card2 input,.gm-card2 select{width:100%;padding:12px;border:1.5px solid #e2e8f0;border-radius:12px;font:inherit;background:#fff}
+.gm-photo{border:2px dashed #94a3b8;border-radius:16px;min-height:200px;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#64748b;overflow:hidden;background:#f8fafc}.gm-photo img{width:100%;display:block}
+.gm-btn{width:100%;border:0;border-radius:14px;padding:14px;font:800 15px system-ui;margin-top:12px}.gm-btn.g{background:#16a34a;color:#fff}.gm-btn.w{background:#fff;color:#14532d;border:1.5px solid #16a34a}.gm-btn[disabled]{opacity:.5}
+.gm-menu button{width:100%;display:flex;align-items:center;gap:12px;background:#fff;border:0;border-bottom:1px solid #eef0f3;padding:14px 4px;font:600 15px system-ui;text-align:left}.gm-menu button i{width:26px;text-align:center;color:#16a34a}.gm-menu button b{margin-left:auto;color:#94a3b8}
+.gm-chip{display:inline-block;padding:4px 10px;border-radius:99px;font:800 11px system-ui}.gm-chip.pending{background:#fef3c7;color:#92400e}.gm-chip.approved{background:#dcfce7;color:#166534}.gm-chip.rejected{background:#fee2e2;color:#991b1b}
+.gm-thumb{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #eef0f3}.gm-thumb img{width:84px;height:56px;object-fit:cover;border-radius:10px;background:#e5e7eb}.gm-thumb span{flex:1;font-weight:700}.gm-thumb button{border:1.5px solid #16a34a;background:#fff;color:#16a34a;border-radius:10px;padding:8px 12px;font-weight:800}
+</style>
+<script id="gm-delivery-auth-v1">(function(){"use strict";
+var $=function(i){return document.getElementById(i)};
+var KEY="gmAuthUid",REQ="MAAFOOD_GOOGLE_LOGIN_REQUEST",OKM="MAAFOOD_GOOGLE_LOGIN_SUCCESS",OUT="MAAFOOD_GOOGLE_LOGOUT";
+var UID=null,P=null,SET={},LANG=(function(){try{return localStorage.getItem("gmLang")||"hi"}catch(e){return"hi"}})(),S={step:0,docs:{}},busy=false,lastBr="";
+var T={en:{g:"Continue with Google",lt:"Welcome, Partner",ls:"Sign in with Google to start delivering GoMandi orders.",lb:"DELIVERY PARTNER",lf:"Secure delivery partner account",open:"Opening Google\u2026",fail:"Login could not be completed. Please try again.",
+ s1:"Aadhaar Card",s2:"PAN Card",s3:"Selfie",s4:"Your details",p1:"Please submit your Aadhaar Card",p2:"Please submit your PAN Card",p3:"Take a clear selfie",pick:"Take / choose photo",retake:"Retake",next:"Next",back:"Back",submit:"Submit",name:"First Name",sur:"Surname",dob:"Date of Birth",ph:"Mobile Number",
+ bad:"Please enter valid details",need:"Please add all 3 photos",saved:"Saved",pending:"Pending approval",approved:"Approved",rejected:"Rejected",edit:"Edit Profile",docs:"Documents",bank:"Bank Details",earn:"Earnings",lang:"Language",set:"Settings",logout:"Logout",bn:"Bank Name",ba:"Account Holder Name",bno:"Account Number",ifsc:"IFSC Code",sv:"Save",repl:"Replace",
+ needP:"Pehle profile poora karo (login ke details + photos).",needA:"Admin approval pending hai. Approve hone ke baad hi Join kar sakte ho.",me:"My Account",total:"Total deliveries",tearn:"Total earnings",pid:"Partner ID",conf:"Logout karna hai?"},
+ hi:{g:"Google se Continue karo",lt:"Welcome, Partner",ls:"GoMandi ke orders deliver karna shuru karne ke liye Google se login karo.",lb:"DELIVERY PARTNER",lf:"Surakshit delivery partner account",open:"Google khul raha hai\u2026",fail:"Login poora nahi hua. Dobara try karo.",
+ s1:"Aadhaar Card",s2:"PAN Card",s3:"Selfie",s4:"Aapki details",p1:"Apna Aadhaar Card submit karo",p2:"Apna PAN Card submit karo",p3:"Saaf selfie lo",pick:"Photo lo / chuno",retake:"Dobara lo",next:"Aage",back:"Wapas",submit:"Submit",name:"Naam",sur:"Surname",dob:"Janm tareekh",ph:"Mobile number",
+ bad:"Sahi details bharo",need:"Teeno photo daalo",saved:"Save ho gaya",pending:"Approval pending",approved:"Approved",rejected:"Reject hua",edit:"Profile edit",docs:"Documents",bank:"Bank details",earn:"Kamaai",lang:"Bhasha",set:"Settings",logout:"Logout",bn:"Bank ka naam",ba:"Account holder ka naam",bno:"Account number",ifsc:"IFSC code",sv:"Save",repl:"Badlo",
+ needP:"Pehle profile poora karo (login ke details + photos).",needA:"Admin approval pending hai. Approve hone ke baad hi Join kar sakte ho.",me:"Mera account",total:"Kul deliveries",tearn:"Kul kamaai",pid:"Partner ID",conf:"Logout karna hai?"}};
+function t(k){return(T[LANG]&&T[LANG][k])||T.en[k]||k}
+function E(s){return typeof esc==="function"?esc(s):String(s==null?"":s).replace(/[&<>"']/g,function(c){return"&#"+c.charCodeAt(0)+";"})}
+function fk(){return safeKey(UID)}
+function complete(p){return!!(p&&p.name&&p.surname&&p.dob&&p.phone&&p.hasAadhar&&p.hasPan&&p.hasSelfie)}
+function ls(k,v){try{if(v===undefined)return localStorage.getItem(k);v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}
+/* ---------- native (Kodular APK) bridge: same protocol as the Audit app ---------- */
+function setBr(v){try{if(window.AppInventor&&typeof AppInventor.setWebViewString==="function"){AppInventor.setWebViewString(v);return true}}catch(e){}try{if(window.Kodular&&typeof Kodular.setWebViewString==="function"){Kodular.setWebViewString(v);return true}}catch(e){}return false}
+function getBr(){try{if(window.AppInventor&&typeof AppInventor.getWebViewString==="function")return AppInventor.getWebViewString()||""}catch(e){}try{if(window.Kodular&&typeof Kodular.getWebViewString==="function")return Kodular.getWebViewString()||""}catch(e){}return""}
+function isNative(){return!!((window.AppInventor&&typeof AppInventor.setWebViewString==="function")||(window.Kodular&&typeof Kodular.setWebViewString==="function"))}
+function parseBr(v){try{var d=JSON.parse(v);if(d&&d.uid)return d}catch(e){}var p=String(v||"").split("|");if(p[0]===OKM||p[0]==="GOOGLE_LOGIN_SUCCESS"||p[0]==="NATIVE_GOOGLE_LOGIN_SUCCESS")return{uid:p[1],email:p[2],name:p[3],photo:p.slice(4).join("|")};return null}
+setInterval(function(){var v=getBr();if(!v||v===lastBr)return;lastBr=v;var d=parseBr(v);if(d)finish(d).catch(function(e){console.error(e);status(t("fail"),1);busy=false;var b=$("gmGoogleBtn");if(b)b.disabled=false})},250);
+/* ---------- browser: official Firebase Google sign-in popup ---------- */
+function loadAuth(){return new Promise(function(res,rej){if(firebase.auth)return res();var s=document.createElement("script");s.src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js";s.onload=res;s.onerror=function(){rej(new Error("Firebase auth SDK not loaded"))};document.head.appendChild(s)})}
+function webLogin(){return loadAuth().then(function(){var a=firebase.auth(),p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:"select_account"});
+ return a.signInWithPopup(p).catch(function(e){if(e&&/popup-blocked|operation-not-supported/.test(e.code||"")){ls("gmRedir","1");return a.signInWithRedirect(p).then(function(){return new Promise(function(){})})}throw e})}).then(function(r){var u=r.user;return{uid:u.uid,email:u.email||"",name:u.displayName||"",photo:u.photoURL||""}})}
+function startGoogle(){if(busy)return;busy=true;var b=$("gmGoogleBtn");if(b)b.disabled=true;status(t("open"));
+ if(isNative()){if(!setBr(REQ)){busy=false;if(b)b.disabled=false;status("Native login unavailable",1)}return}
+ webLogin().then(finish).catch(function(e){console.error(e);busy=false;if(b)b.disabled=false;var c=(e&&e.code)||"";status(c==="auth/unauthorized-domain"?"Is website ko Firebase > Authentication > Authorized domains mein add karo.":c==="auth/popup-closed-by-user"?"":t("fail"),c!=="auth/popup-closed-by-user")})}
+function status(m,err){var e=$("gmLoginStatus");if(e){e.textContent=m||"";e.style.color=err?"#c62828":"#64748b"}}
+/* ---------- login -> unique rider id ---------- */
+function setCookie(id){try{document.cookie="gomandi_partner_id="+encodeURIComponent(id)+"; max-age=31536000; path=/; SameSite=Lax"}catch(e){}}
+function finish(d){var uid=String(d&&d.uid||"").trim();if(!uid)return Promise.reject(new Error("no uid"));
+ ls(KEY,uid);ls("gmAuthEmail",d.email||"");ls("gmAuthName",d.name||"");ls("gomandi_test_partner_id",uid);setCookie(uid);
+ if(d.name&&!ls("gomandi_test_partner_name"))ls("gomandi_test_partner_name",d.name);
+ return firebase.database().ref("delivery_partners/"+safeKey(uid)).update({uid:uid,email:d.email||"",gname:d.name||"",photoURL:d.photo||"",lastLoginAt:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}).then(function(){busy=false;if(MY_ID!==uid){ls("gmReloaded","1");location.reload();return}return boot()})}
+function boot(){var s=ls(KEY);if(!s){splash(false);show("gmLogin");return Promise.resolve()}
+ if(MY_ID!==s){if(ls("gmReloaded")==="1"){ls("gmReloaded",null);splash(false);show("gmLogin");return Promise.resolve()}ls("gmReloaded","1");ls("gomandi_test_partner_id",s);setCookie(s);location.reload();return Promise.resolve()}
+ ls("gmReloaded",null);UID=s;hide("gmLogin");var c=null;try{c=JSON.parse(ls("gmPC")||"null")}catch(e){}if(c&&c.uid===s&&c.ok)splash(false);var fail=setTimeout(function(){splash(false)},7000);
+ firebase.database().ref("delivery_settings/requireApproval").on("value",function(x){SET.requireApproval=x.val()});
+ return firebase.database().ref("delivery_partners/"+fk()).once("value").then(function(sn){clearTimeout(fail);P=sn.val()||{};cacheState();afterProfile();splash(false);firebase.database().ref("delivery_partners/"+fk()).on("value",function(x){P=x.val()||P;cacheState();paintMe();applyName()})}).catch(function(){clearTimeout(fail);splash(false);status("Network problem. Dobara try karo.",1);show("gmLogin")})}
+function afterProfile(){applyName();if(!complete(P)){if(!S.docs.loaded){S.docs={};}openOnb()}else{hide("gmOnb")}paintMe()}
+function splash(on){document.documentElement.classList[on?"add":"remove"]("gm-cover")}
+function cacheState(){try{ls("gmPC",JSON.stringify({uid:UID,ok:complete(P)}))}catch(e){}}
+function show(id){var e=$(id);if(e)e.classList.add("on")}function hide(id){var e=$(id);if(e)e.classList.remove("on")}
+function applyName(){if(!P)return;var n=[P.name,P.surname].filter(Boolean).join(" ")||ls("gmAuthName")||"";if(n)ls("gomandi_test_partner_name",n);if(P.phone)ls("gomandi_test_partner_phone",P.phone);
+ var a=$("profileNameText");if(a&&n)a.textContent=n;var b=$("profileAvatarLetter");if(b&&n)b.textContent=n.charAt(0).toUpperCase();var c=$("profilePhone");if(c&&P.phone&&document.activeElement!==c)c.value=P.phone}
+/* ---------- photos (native camera / gallery chooser, compressed) ---------- */
+function fileToData(file,maxW){return new Promise(function(res,rej){var fr=new FileReader();fr.onerror=function(){rej(fr.error)};fr.onload=function(){var im=new Image();im.onerror=function(){rej(new Error("decode"))};im.onload=function(){var sc=Math.min(1,maxW/im.naturalWidth),c=document.createElement("canvas");c.width=Math.round(im.naturalWidth*sc);c.height=Math.round(im.naturalHeight*sc);c.getContext("2d").drawImage(im,0,0,c.width,c.height);res(c.toDataURL("image/jpeg",.72))};im.src=fr.result};fr.readAsDataURL(file)})}
+function pickPhoto(kind,mode,cb){var i=document.createElement("input");i.type="file";i.accept="image/*";if(mode==="cam")i.setAttribute("capture",kind==="selfie"?"user":"environment");i.style.display="none";document.body.appendChild(i);
+ i.onchange=function(){var f=i.files&&i.files[0];document.body.removeChild(i);if(!f)return;fileToData(f,1000).then(cb).catch(function(){toast("Photo read nahi hui")})};i.click()}
+/* ---------- onboarding (same fields as the Audit app) ---------- */
+var KINDS=["aadhar","pan","selfie"];
+function persistDoc(k,d){var u={};u[k]=d;u.updatedAt=Date.now();var f={};f["has"+k.charAt(0).toUpperCase()+k.slice(1)]=true;f.updatedAt=Date.now();
+ firebase.database().ref("delivery_partner_docs/"+fk()).update(u).then(function(){return firebase.database().ref("delivery_partners/"+fk()).update(f)}).catch(function(){toast("Photo save nahi hui, dobara try karo")})}
+function openOnb(){var p=P||{};S.step=!p.hasAadhar?0:!p.hasPan?1:!p.hasSelfie?2:3;show("gmOnb");renderOnb()}
+function renderOnb(){var el=$("gmOnb");if(!el)return;var st=S.step,h='<div class="gm-wrap"><div class="gm-top">'+(st>0?'<button class="gm-back" onclick="gmAuth.back()">\u2039</button>':'')+'<div><div style="font-size:12px;color:#64748b">'+(st+1)+' / 4</div><h2>'+t(["s1","s2","s3","s4"][st])+'</h2></div></div><div class="gm-steps">'+[0,1,2,3].map(function(i){return'<i class="'+(i<=st?"on":"")+'"></i>'}).join("")+'</div>';
+ if(st<3){var k=KINDS[st],img=S.docs[k];h+='<div class="gm-card2"><p style="margin:0 0 12px;color:#475569">'+t(["p1","p2","p3"][st])+'</p><div class="gm-photo">'+(img?'<img src="'+img+'">':'<i class="fa-solid fa-camera" style="font-size:34px"></i>')+'</div><div style="display:flex;gap:8px"><button class="gm-btn w" style="flex:1" onclick="gmAuth.pick(\''+k+'\',\'cam\')"><i class="fa-solid fa-camera"></i> '+(img?t("retake"):"Camera")+'</button><button class="gm-btn w" style="flex:1" onclick="gmAuth.pick(\''+k+'\',\'gal\')"><i class="fa-solid fa-image"></i> Gallery</button></div></div><button class="gm-btn g" '+(img?"":"disabled")+' onclick="gmAuth.next()">'+t("next")+'</button>'}
+ else{var p=P||{},dr={};try{dr=JSON.parse(ls("gmDraft")||"{}")||{}}catch(e){}h+='<div class="gm-card2" oninput="gmAuth.draft()"><label>'+t("name")+'</label><input id="obN" value="'+E(p.name||dr.n||(ls("gmAuthName")||"").split(" ")[0]||"")+'"><label>'+t("sur")+'</label><input id="obS" value="'+E(p.surname||dr.s||(ls("gmAuthName")||"").split(" ").slice(1).join(" ")||"")+'"><label>'+t("dob")+'</label><input id="obD" type="date" value="'+E(p.dob||dr.d||"")+'"><label>'+t("ph")+'</label><input id="obP" inputmode="numeric" maxlength="10" value="'+E(p.phone||dr.p||"")+'"></div><button class="gm-btn g" id="obSub" onclick="gmAuth.submit()">'+t("submit")+'</button>'}
+ el.innerHTML=h+'</div>'}
+function saveDocs(extra){var u={};KINDS.forEach(function(k){if(S.docs[k])u[k]=S.docs[k]});u.updatedAt=Date.now();return firebase.database().ref("delivery_partner_docs/"+fk()).update(u)}
+window.gmAuth={google:startGoogle,
+ pick:function(k,m){pickPhoto(k,m||"gal",function(d){S.docs[k]=d;persistDoc(k,d);renderOnb()})},
+ draft:function(){try{ls("gmDraft",JSON.stringify({n:$("obN").value,s:$("obS").value,d:$("obD").value,p:$("obP").value}))}catch(e){}},next:function(){if(S.step<3){S.step++;renderOnb()}},back:function(){if(S.step>0){S.step--;renderOnb()}},
+ submit:function(){var n=$("obN").value.trim(),s=$("obS").value.trim(),d=$("obD").value,ph=$("obP").value.trim();if(!n||!s||!d||!/^\d{10}$/.test(ph)){toast(t("bad"));return}
+  var need=KINDS.some(function(k){return!S.docs[k]&&!(P&&P["has"+k.charAt(0).toUpperCase()+k.slice(1)])});if(need){toast(t("need"));return}
+  var b=$("obSub");if(b)b.disabled=true;
+  saveDocs().then(function(){var o={name:n,surname:s,dob:d,phone:ph,hasAadhar:true,hasPan:true,hasSelfie:true,updatedAt:Date.now()};if(!P||!P.status)o.status="pending";if(!P||!P.createdAt)o.createdAt=Date.now();o.earnings=(P&&P.earnings)||{total:0,available:0,paid:0};return firebase.database().ref("delivery_partners/"+fk()).update(o)}).then(function(){S.docs={};ls("gmDraft",null);toast(t("saved"));return firebase.database().ref("delivery_partners/"+fk()).once("value")}).then(function(sn){P=sn.val();hide("gmOnb");applyName();paintMe()}).catch(function(){toast("Save nahi hua, dobara try karo");if(b)b.disabled=false})},
+ me:function(page){openMe(page)},closeMe:function(){hide("gmMe")},
+ saveEdit:function(){var n=$("epN").value.trim(),s=$("epS").value.trim(),d=$("epD").value,ph=$("epP").value.trim();if(!n||!s||!d||!/^\d{10}$/.test(ph)){toast(t("bad"));return}firebase.database().ref("delivery_partners/"+fk()).update({name:n,surname:s,dob:d,phone:ph,updatedAt:Date.now()}).then(function(){toast(t("saved"))})},
+ saveBank:function(){var b={bankName:$("bkN").value.trim(),accountName:$("bkA").value.trim(),accountNo:$("bkNo").value.replace(/\s/g,""),ifsc:$("bkI").value.trim().toUpperCase()};if(!b.bankName||!b.accountName||!/^\d{9,18}$/.test(b.accountNo)||!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(b.ifsc)){toast(t("bad"));return}firebase.database().ref("delivery_partners/"+fk()+"/bank").set(b).then(function(){toast(t("saved"))})},
+ replace:function(k){pickPhoto(k,"gal",function(d){var u={};u[k]=d;u.updatedAt=Date.now();firebase.database().ref("delivery_partner_docs/"+fk()).update(u).then(function(){toast(t("saved"));openMe("docs")})})},
+ lang:function(l){LANG=l;ls("gmLang",l);openMe("lang");paintMe()},
+ logout:function(){if(!confirm(t("conf")))return;["gmAuthUid","gmAuthEmail","gmAuthName","gomandi_test_partner_id","gomandi_test_partner_name","gomandi_test_partner_phone"].forEach(function(k){ls(k,null)});try{document.cookie="gomandi_partner_id=; max-age=0; path=/"}catch(e){}try{setBr(OUT)}catch(e){}try{if(firebase.auth)firebase.auth().signOut()}catch(e){}location.reload()}};
+/* ---------- Profile tab: account menu (same options as the Audit app's Me page) ---------- */
+function paintMe(){var pv=$("profileView");if(!pv)return;var c=$("gmMeCard");if(!c){c=document.createElement("div");c.id="gmMeCard";c.className="card";c.style.marginTop="12px";pv.appendChild(c)}
+ var st=(P&&P.status)||"pending";c.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><b>'+t("me")+'</b><span class="gm-chip '+E(st)+'">'+t(st)+'</span></div><div class="gm-menu">'+[["edit","fa-user-pen","edit"],["docs","fa-id-card","docs"],["bank","fa-building-columns","bank"],["earn","fa-indian-rupee-sign","earn"],["lang","fa-language","lang"],["set","fa-gear","set"]].map(function(m){return'<button type="button" onclick="gmAuth.me(\''+m[0]+'\')"><i class="fa-solid '+m[1]+'"></i><span>'+t(m[2])+'</span><b>\u203A</b></button>'}).join("")+'</div>'}
+function openMe(page){var el=$("gmMe");if(!el){el=document.createElement("div");el.id="gmMe";document.body.appendChild(el)}var p=P||{},b=p.bank||{},body="";
+ if(page==="edit")body='<div class="gm-card2"><label>'+t("name")+'</label><input id="epN" value="'+E(p.name||"")+'"><label>'+t("sur")+'</label><input id="epS" value="'+E(p.surname||"")+'"><label>'+t("dob")+'</label><input id="epD" type="date" value="'+E(p.dob||"")+'"><label>'+t("ph")+'</label><input id="epP" inputmode="numeric" maxlength="10" value="'+E(p.phone||"")+'"></div><button class="gm-btn g" onclick="gmAuth.saveEdit()">'+t("sv")+'</button>';
+ else if(page==="bank")body='<div class="gm-card2"><label>'+t("bn")+'</label><input id="bkN" value="'+E(b.bankName||"")+'"><label>'+t("ba")+'</label><input id="bkA" value="'+E(b.accountName||"")+'"><label>'+t("bno")+'</label><input id="bkNo" inputmode="numeric" value="'+E(b.accountNo||"")+'"><label>'+t("ifsc")+'</label><input id="bkI" value="'+E(b.ifsc||"")+'" style="text-transform:uppercase"></div><button class="gm-btn g" onclick="gmAuth.saveBank()">'+t("sv")+'</button>';
+ else if(page==="earn"){var dl=$("statDelivered"),er=$("statEarnings");body='<div class="gm-card2"><label>'+t("total")+'</label><div style="font-size:26px;font-weight:800">'+E(dl?dl.textContent:"0")+'</div><label>'+t("tearn")+'</label><div style="font-size:26px;font-weight:800;color:#15803d">'+E(er?er.textContent:"\u20B90")+'</div></div>'}
+ else if(page==="lang")body='<div class="gm-card2"><button class="gm-btn '+(LANG==="hi"?"g":"w")+'" onclick="gmAuth.lang(\'hi\')">\u0939\u093F\u0928\u094D\u0926\u0940</button><button class="gm-btn '+(LANG==="en"?"g":"w")+'" onclick="gmAuth.lang(\'en\')">English</button></div>';
+ else if(page==="set")body='<div class="gm-card2"><label>'+t("pid")+'</label><div style="word-break:break-all;font-weight:700">'+E(UID||"")+'</div><label>Email</label><div>'+E(ls("gmAuthEmail")||"")+'</div></div><button class="gm-btn w" style="color:#b91c1c;border-color:#b91c1c" onclick="gmAuth.logout()">'+t("logout")+'</button>';
+ else if(page==="docs"){body='<div class="gm-card2" id="gmDocs">...</div>';firebase.database().ref("delivery_partner_docs/"+fk()).once("value").then(function(sn){var d=sn.val()||{},x=$("gmDocs");if(!x)return;x.innerHTML=KINDS.map(function(k){return'<div class="gm-thumb"><img src="'+(d[k]||"")+'"><span>'+t({aadhar:"s1",pan:"s2",selfie:"s3"}[k])+'</span><button onclick="gmAuth.replace(\''+k+'\')">'+t("repl")+'</button></div>'}).join("")})}
+ el.innerHTML='<div class="gm-wrap"><div class="gm-top"><button class="gm-back" onclick="gmAuth.closeMe()">\u2039</button><h2>'+t(page==="earn"?"earn":page)+'</h2></div>'+body+'</div>';show("gmMe")}
+/* ---------- Join only after profile + approval ---------- */
+function gate(){if(!UID||!complete(P)){toast(t("needP"));return false}if(SET.requireApproval!==false&&(P.status||"pending")!=="approved"){toast(t("needA"));return false}return true}
+var oJoin=window.joinOrder;if(typeof oJoin==="function")window.joinOrder=function(){if(!gate())return;return oJoin.apply(this,arguments)};
+/* ---------- login screen + start ---------- */
+(function(){var l=document.createElement("div");l.id="gmLogin";l.innerHTML='<div class="orb o1"></div><div class="orb o2"></div><div class="gm-lcard"><div class="gm-llogo"><i class="fa-solid fa-motorcycle"></i></div><div class="gm-lbadge">'+t("lb")+'</div><h2>'+t("lt")+'</h2><p>'+t("ls")+'</p><button id="gmGoogleBtn" type="button" onclick="gmAuth.google()"><span class="g">G</span><span>'+t("g")+'</span></button><div id="gmLoginStatus"></div><div class="gm-lfoot">\uD83D\uDEF5 '+t("lf")+'</div></div>';document.body.appendChild(l);
+ var o=document.createElement("div");o.id="gmOnb";document.body.appendChild(o)})();
+if(ls("gmRedir")==="1"){ls("gmRedir",null);loadAuth().then(function(){return firebase.auth().getRedirectResult()}).then(function(r){if(r&&r.user){var u=r.user;return finish({uid:u.uid,email:u.email||"",name:u.displayName||"",photo:u.photoURL||""})}return boot()}).catch(function(){return boot()})}else boot();
+})();</script>
+
+</body>
+</html>
