@@ -191,9 +191,9 @@ html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:#
 </style>
 </head>
 <body>
-<style id="gm-cover-style">#gmSplash{display:none;position:fixed;inset:0;z-index:100100;background:#fff;align-items:center;justify-content:center;flex-direction:column}html.gm-cover #gmSplash{display:flex}</style>
-<script>try{var __u=localStorage.getItem('gmAuthUid'),__c=JSON.parse(localStorage.getItem('gmPC')||'null');if(!(__u&&__c&&__c.uid===__u&&__c.ok))document.documentElement.classList.add('gm-cover')}catch(e){document.documentElement.classList.add('gm-cover')}</script>
-<div id="gmSplash"><i class="fa-solid fa-motorcycle" style="font-size:46px;color:#16a34a"></i><div style="margin-top:14px;font:800 16px system-ui;color:#14532d">GoMandi Delivery</div><div style="margin-top:6px;font:500 12px system-ui;color:#94a3b8">Loading…</div></div>
+<style id="gm-cover-style">#gmSplash{display:none;position:fixed;inset:0;z-index:100100;background:#fff;align-items:center;justify-content:center;flex-direction:column}html.gm-cover #gmSplash{display:flex}@keyframes gmSpin{to{transform:rotate(360deg)}}#gmSplash .sp{width:54px;height:54px;border-radius:50%;border:5px solid #dcfce7;border-top-color:#16a34a;animation:gmSpin .9s linear infinite}</style>
+<script>try{document.documentElement.classList.add('gm-cover')}catch(e){}</script>
+<div id="gmSplash"><i class="fa-solid fa-motorcycle" style="font-size:40px;color:#16a34a;margin-bottom:18px"></i><div class="sp"></div><div style="margin-top:18px;font:800 16px system-ui;color:#14532d">GoMandi Delivery</div><div id="gmSplashMsg" style="margin-top:6px;font:500 12px system-ui;color:#94a3b8;text-align:center;padding:0 24px">Data load ho raha hai…</div></div>
 
 
 <div class="test-badge">⚠ TEST MODE — Login/KYC not added yet. Firebase data is real.</div>
@@ -1590,10 +1590,14 @@ function finish(d){var raw=String(d&&d.uid||"").trim();if(!raw)return Promise.re
   return firebase.database().ref("delivery_partners/"+safeKey(uid)).update(up).catch(function(){}).then(function(){busy=false;if(MY_ID!==uid){ls("gmReloaded","1");location.reload();return}return boot()})})}
 function boot(){var s=ls(KEY);if(!s){splash(false);show("gmLogin");return Promise.resolve()}
  if(MY_ID!==s){if(ls("gmReloaded")==="1"){ls("gmReloaded",null);splash(false);show("gmLogin");return Promise.resolve()}ls("gmReloaded","1");ls("gomandi_test_partner_id",s);setCookie(s);location.reload();return Promise.resolve()}
- ls("gmReloaded",null);UID=s;hide("gmLogin");var c=null;try{c=JSON.parse(ls("gmPC")||"null")}catch(e){}if(c&&c.uid===s&&c.ok)splash(false);var fail=setTimeout(function(){splash(false)},7000);
+ ls("gmReloaded",null);UID=s;hide("gmLogin");var c=null;try{c=JSON.parse(ls("gmPC")||"null")}catch(e){}var fail=setTimeout(function(){slow("Internet slow hai\u2026 data aa raha hai")},8000);
  firebase.database().ref("delivery_settings/requireApproval").on("value",function(x){SET.requireApproval=x.val()});
- return firebase.database().ref("delivery_partners/"+fk()).once("value").then(function(sn){clearTimeout(fail);P=sn.val()||{};cacheState();afterProfile();guardState();watchWarn();splash(false);firebase.database().ref("delivery_partners/"+fk()).on("value",function(x){P=x.val()||P;cacheState();paintMe();applyName();guardState()})}).catch(function(){clearTimeout(fail);splash(false);status("Network problem. Dobara try karo.",1);show("gmLogin")})}
+ return firebase.database().ref("delivery_partners/"+fk()).once("value").then(function(sn){clearTimeout(fail);P=sn.val()||{};cacheState();afterProfile();guardState();watchWarn();watchNet();whenData(function(){splash(false)});firebase.database().ref("delivery_partners/"+fk()).on("value",function(x){P=x.val()||P;cacheState();paintMe();applyName();guardState()})}).catch(function(){clearTimeout(fail);slow("Data aane ka wait hai\u2026");setTimeout(boot,3000)})}
 function afterProfile(){applyName();if(!complete(P)){if(!S.docs.loaded){S.docs={};}openOnb()}else{hide("gmOnb")}paintMe()}
+function slow(m){var e=$("gmSplashMsg");if(e)e.textContent=m}
+function whenData(cb){var t=setInterval(function(){var ok=true;try{ok=ORDERS_LOADED===true}catch(e){ok=true}if(ok){clearInterval(t);cb()}},120)}
+var netT=null,netOff=false;
+function watchNet(){try{firebase.database().ref(".info/connected").on("value",function(s){var on=s.val()===true,b=$("gmNet");if(!b){b=document.createElement("div");b.id="gmNet";b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:100090;background:#b45309;color:#fff;font:700 12px system-ui;text-align:center;padding:6px;display:none";b.textContent="Internet reconnect ho raha hai\u2026 data load ho raha hai";document.body.appendChild(b)}clearTimeout(netT);if(on){b.style.display="none"}else netT=setTimeout(function(){b.style.display="block"},2500)})}catch(e){}}
 function splash(on){document.documentElement.classList[on?"add":"remove"]("gm-cover")}
 function cacheState(){try{ls("gmPC",JSON.stringify({uid:UID,ok:complete(P)}))}catch(e){}}
 function show(id){var e=$(id);if(e)e.classList.add("on")}function hide(id){var e=$(id);if(e)e.classList.remove("on")}
@@ -1652,6 +1656,29 @@ var oJoin=window.joinOrder;if(typeof oJoin==="function")window.joinOrder=functio
 (function(){var l=document.createElement("div");l.id="gmLogin";l.innerHTML='<div class="orb o1"></div><div class="orb o2"></div><div class="gm-lcard"><div class="gm-llogo"><i class="fa-solid fa-motorcycle"></i></div><div class="gm-lbadge">'+t("lb")+'</div><h2>'+t("lt")+'</h2><p>'+t("ls")+'</p><button id="gmGoogleBtn" type="button" onclick="gmAuth.google()"><span class="g">G</span><span>'+t("g")+'</span></button><div id="gmLoginStatus"></div><div class="gm-lfoot">\uD83D\uDEF5 '+t("lf")+'</div></div>';document.body.appendChild(l);
  var o=document.createElement("div");o.id="gmOnb";document.body.appendChild(o)})();
 if(ls("gmRedir")==="1"){ls("gmRedir",null);loadAuth().then(function(){return firebase.auth().getRedirectResult()}).then(function(r){if(r&&r.user){var u=r.user;return finish({uid:u.uid,email:u.email||"",name:u.displayName||"",photo:u.photoURL||""})}return boot()}).catch(function(){return boot()})}else boot();
+})();</script>
+
+<script id="gm-map-guard-v1">(function(){"use strict";
+/* 1) red route never blinks: draw the new line first, remove the old one a moment later, and skip redraws of the same route */
+var oApply=window.applyRoute,lastSig="",lastMap=null;
+if(typeof oApply==="function")window.applyRoute=function(coords,fit){
+ try{if(!deliveryMap||!coords||!coords.length)return;if(deliveryMap!==lastMap){lastMap=deliveryMap;lastSig=""}
+  var n=coords.length,sig=n+"|"+coords[0].join(",")+"|"+coords[n>>1].join(",")+"|"+coords[n-1].join(",");
+  if(routeLine&&sig===lastSig&&!fit)return;lastSig=sig;
+  var path=coords.map(function(p){return{lat:Number(p[1]),lng:Number(p[0])}}),old=routeLine;
+  routeLine=new mappls.Polyline({map:deliveryMap,path:path,strokeColor:"#e53935",strokeOpacity:1,strokeWeight:6,fitbounds:!!fit,fitboundOptions:{padding:100,duration:500}});
+  if(old)setTimeout(function(){try{mappls.remove({map:deliveryMap,layer:old})}catch(e){}},150)
+ }catch(e){try{return oApply.apply(this,arguments)}catch(x){}}};
+/* 2) white tiles: resize pulses, and if the map never reports "load" the page's own teardown + open are run again (max 2 times per open) */
+var att=0;
+function active(){var ov=document.getElementById("deliveryMapOverlay");return !!(ov&&ov.classList.contains("active"))}
+function rebuild(){if(att>=2||!active())return;att++;var key=activeMapKey;try{teardownMap()}catch(e){}setTimeout(function(){try{openDeliveryMap(key)}catch(e){}},120)}
+function hook(){if(!deliveryMap||deliveryMap.__gmH)return;var m=deliveryMap;m.__gmH=1;m.__gmLoaded=false;try{m.addListener("load",function(){m.__gmLoaded=true})}catch(e){m.__gmLoaded=true}
+ [300,900,2200,4000].forEach(function(ms){setTimeout(function(){try{if(deliveryMap===m&&m.resize)m.resize()}catch(e){}},ms)});
+ setTimeout(function(){if(deliveryMap===m&&active()&&!m.__gmLoaded)rebuild()},6500)}
+setInterval(function(){if(!active()){att=0;return}hook()},600);
+document.addEventListener("visibilitychange",function(){if(document.hidden||!deliveryMap||!active())return;try{deliveryMap.resize()}catch(e){}var m=deliveryMap;setTimeout(function(){if(deliveryMap===m&&active()&&!m.__gmLoaded)rebuild()},2500)});
+window.addEventListener("pageshow",function(){try{if(deliveryMap&&deliveryMap.resize)deliveryMap.resize()}catch(e){}});
 })();</script>
 
 </body>
