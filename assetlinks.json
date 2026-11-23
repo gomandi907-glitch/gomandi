@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "in.gomandi.app",
+        "sha256_cert_fingerprints": ["ED:10:B4:E8:73:73:00:A6:F2:81:09:22:4C:E5:3A:8F:31:C8:6B:8D:CC:3E:27:D3:2D:17:D7:F0:A5:1C:42:64"]
+      }
+    }]
